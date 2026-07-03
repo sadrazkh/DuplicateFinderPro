@@ -1,0 +1,493 @@
+<Window x:Class="DuplicateFinderPro.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:loc="clr-namespace:DuplicateFinderPro.App.Localization"
+        xmlns:vm="clr-namespace:DuplicateFinderPro.App.ViewModels"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        d:DataContext="{d:DesignInstance vm:MainViewModel}"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
+        FontFamily="Segoe UI, Tahoma, Vazirmatn"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Auto"
+        FlowDirection="{Binding FlowDirection, Source={x:Static loc:Localization.Instance}}"
+        Title="{loc:Loc App.Title}"
+        Height="820" Width="1280"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <!-- Card style for grouping panels -->
+        <Style x:Key="Section" TargetType="materialDesign:Card">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="Margin" Value="8" />
+            <Setter Property="UniformCornerRadius" Value="10" />
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+    </Window.Resources>
+
+    <materialDesign:DialogHost Identifier="Root">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ===== Top app bar ===== -->
+            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryDark" Padding="16,10"
+                                      materialDesign:ElevationAssist.Elevation="Dp4">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="FileFind" Width="34" Height="34" VerticalAlignment="Center" />
+                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{loc:Loc App.Title}" FontSize="18" FontWeight="Bold" />
+                            <TextBlock Text="{loc:Loc App.Subtitle}" FontSize="12" Opacity="0.8" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="White"
+                                Command="{Binding SetLanguageCommand}"
+                                CommandParameter="{x:Static loc:AppLanguage.Persian}"
+                                Content="{loc:Loc Lang.Persian}" />
+                        <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                Foreground="White"
+                                Command="{Binding SetLanguageCommand}"
+                                CommandParameter="{x:Static loc:AppLanguage.English}"
+                                Content="{loc:Loc Lang.English}" />
+                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                Foreground="White"
+                                ToolTip="{loc:Loc Menu.Theme}"
+                                Command="{Binding ToggleThemeCommand}">
+                            <materialDesign:PackIcon Kind="ThemeLightDark" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </materialDesign:ColorZone>
+
+            <!-- ===== Body ===== -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="400" MinWidth="340" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" MinWidth="480" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ===== Left: configuration ===== -->
+                <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Padding="4">
+                    <StackPanel>
+                        <!-- Folders -->
+                        <materialDesign:Card Style="{StaticResource Section}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Folders}" />
+                                <Border BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="1"
+                                        CornerRadius="6" MinHeight="90" AllowDrop="True"
+                                        Drop="OnFoldersDrop" DragOver="OnFoldersDragOver">
+                                    <Grid>
+                                        <TextBlock Text="{loc:Loc Config.DropHint}" Opacity="0.5"
+                                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap" Margin="12"
+                                                   Visibility="{Binding Folders.Count, Converter={StaticResource CountToVis}, ConverterParameter=invert}" />
+                                        <ItemsControl ItemsSource="{Binding Folders}" Margin="4">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid Margin="2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto" />
+                                                            <ColumnDefinition Width="*" />
+                                                            <ColumnDefinition Width="Auto" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <materialDesign:PackIcon Grid.Column="0" Kind="Folder"
+                                                                                 VerticalAlignment="Center" Margin="4,0" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding}" VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding}" />
+                                                        <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}"
+                                                                Width="28" Height="28" Padding="0"
+                                                                Command="{Binding DataContext.RemoveFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}">
+                                                            <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </Border>
+                                <Button Margin="0,10,0,0" HorizontalAlignment="Stretch"
+                                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Command="{Binding AddFolderCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FolderPlus" Margin="0,0,6,0" />
+                                        <TextBlock Text="{loc:Loc Config.AddFolder}" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Detection methods -->
+                        <materialDesign:Card Style="{StaticResource Section}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Methods}" />
+                                <CheckBox IsChecked="{Binding UseExactContent}" Margin="0,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Method.ExactContent}" FontWeight="Medium" />
+                                        <TextBlock Text="{loc:Loc Method.ExactContent.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding UseNameSimilarity}" Margin="0,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Method.NameSimilarity}" FontWeight="Medium" />
+                                        <TextBlock Text="{loc:Loc Method.NameSimilarity.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding UsePerceptualImage}" Margin="0,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Method.PerceptualImage}" FontWeight="Medium" />
+                                        <TextBlock Text="{loc:Loc Method.PerceptualImage.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                                <CheckBox IsChecked="{Binding UsePerceptualVideo}" Margin="0,4">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Method.PerceptualVideo}" FontWeight="Medium" />
+                                        <TextBlock Text="{loc:Loc Method.PerceptualVideo.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Filters -->
+                        <materialDesign:Card Style="{StaticResource Section}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Filters}" />
+                                <CheckBox Content="{loc:Loc Config.Recursive}" IsChecked="{Binding Recursive}" Margin="0,2" />
+                                <CheckBox Content="{loc:Loc Config.IncludeHidden}" IsChecked="{Binding IncludeHidden}" Margin="0,2" />
+                                <TextBox Margin="0,10,0,0"
+                                         materialDesign:HintAssist.Hint="{loc:Loc Config.MinSize}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding MinSizeKb, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox Margin="0,10,0,0"
+                                         materialDesign:HintAssist.Hint="{loc:Loc Config.MaxSize}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding MaxSizeKb, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox Margin="0,10,0,0"
+                                         materialDesign:HintAssist.Hint="{loc:Loc Config.IncludeExt}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding IncludeExtensions, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBox Margin="0,10,0,0"
+                                         materialDesign:HintAssist.Hint="{loc:Loc Config.ExcludeExt}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding ExcludeExtensions, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Advanced -->
+                        <materialDesign:Card Style="{StaticResource Section}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Advanced}" />
+
+                                <TextBlock Text="{loc:Loc Config.NameThreshold}" FontSize="12" Opacity="0.8" />
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
+                                               Text="{Binding NameThreshold, StringFormat={}{0:P0}}" VerticalAlignment="Center" />
+                                    <Slider Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                            Value="{Binding NameThreshold}" Margin="0,0,8,0" />
+                                </DockPanel>
+
+                                <TextBlock Text="{loc:Loc Config.PerceptualThreshold}" FontSize="12" Opacity="0.8" Margin="0,8,0,0" />
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
+                                               Text="{Binding PerceptualThreshold}" VerticalAlignment="Center" />
+                                    <Slider Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding PerceptualThreshold}" Margin="0,0,8,0" />
+                                </DockPanel>
+
+                                <TextBlock Text="{loc:Loc Config.VideoSamples}" FontSize="12" Opacity="0.8" Margin="0,8,0,0" />
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
+                                               Text="{Binding VideoSamples}" VerticalAlignment="Center" />
+                                    <Slider Minimum="1" Maximum="20" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding VideoSamples}" Margin="0,0,8,0" />
+                                </DockPanel>
+
+                                <TextBox Margin="0,10,0,0"
+                                         materialDesign:HintAssist.Hint="{loc:Loc Config.Ffmpeg}"
+                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                         Text="{Binding FfmpegPath, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+                        </materialDesign:Card>
+
+                        <!-- Scan actions -->
+                        <materialDesign:Card Style="{StaticResource Section}">
+                            <StackPanel>
+                                <Button Height="46" Style="{StaticResource MaterialDesignRaisedButton}"
+                                        Command="{Binding ScanCommand}"
+                                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Magnify" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{loc:Loc Action.Scan}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Height="46" Style="{StaticResource MaterialDesignOutlinedButton}"
+                                        Command="{Binding CancelCommand}"
+                                        Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Close" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{loc:Loc Action.Cancel}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+
+                                <ProgressBar Margin="0,14,0,6" Height="6"
+                                             Value="{Binding ProgressValue}"
+                                             IsIndeterminate="{Binding IsIndeterminate}"
+                                             Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}" />
+                                <TextBlock Text="{Binding StatusText}" FontWeight="Medium" />
+                                <TextBlock Text="{Binding CurrentFile}" FontSize="11" Opacity="0.6"
+                                           TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding CurrentFile, Converter={StaticResource StringToVis}}" />
+                            </StackPanel>
+                        </materialDesign:Card>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center"
+                              VerticalAlignment="Stretch" Background="{DynamicResource MaterialDesignDivider}" />
+
+                <!-- ===== Right: results ===== -->
+                <Grid Grid.Column="2" Margin="4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Summary chips -->
+                    <materialDesign:Card Grid.Row="0" Style="{StaticResource Section}">
+                        <WrapPanel>
+                            <StackPanel Margin="6,2" MinWidth="120">
+                                <TextBlock Text="{loc:Loc Results.FilesScanned}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="{Binding FilesScanned}" FontSize="20" FontWeight="Bold" />
+                            </StackPanel>
+                            <StackPanel Margin="16,2,6,2" MinWidth="120">
+                                <TextBlock Text="{loc:Loc Results.Groups}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="{Binding GroupCount}" FontSize="20" FontWeight="Bold" />
+                            </StackPanel>
+                            <StackPanel Margin="16,2,6,2" MinWidth="120">
+                                <TextBlock Text="{loc:Loc Results.RedundantFiles}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="{Binding RedundantCount}" FontSize="20" FontWeight="Bold" />
+                            </StackPanel>
+                            <StackPanel Margin="16,2,6,2" MinWidth="140">
+                                <TextBlock Text="{loc:Loc Results.Reclaimable}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="{Binding ReclaimableDisplay}" FontSize="20" FontWeight="Bold"
+                                           Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                            </StackPanel>
+                            <StackPanel Margin="16,2,6,2" MinWidth="90">
+                                <TextBlock Text="{loc:Loc Results.Elapsed}" FontSize="11" Opacity="0.7" />
+                                <TextBlock Text="{Binding ElapsedDisplay}" FontSize="20" FontWeight="Bold" />
+                            </StackPanel>
+                        </WrapPanel>
+                    </materialDesign:Card>
+
+                    <!-- Result toolbar -->
+                    <materialDesign:Card Grid.Row="1" Style="{StaticResource Section}">
+                        <WrapPanel>
+                            <TextBlock Text="{loc:Loc Keep.Rule}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <ComboBox MinWidth="150" Margin="0,0,8,0" VerticalAlignment="Center"
+                                      ItemsSource="{Binding KeepRules}"
+                                      SelectedItem="{Binding SelectedKeepRule}"
+                                      DisplayMemberPath="Display" />
+                            <Button Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,8,0"
+                                    Command="{Binding AutoSelectCommand}" Content="{loc:Loc Action.SelectByRule}" />
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0"
+                                    Command="{Binding ClearSelectionCommand}" Content="{loc:Loc Action.ClearSelection}" />
+                            <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="4,0" />
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,4,0"
+                                    Command="{Binding ExpandAllCommand}" Content="{loc:Loc Action.ExpandAll}" />
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,4,0"
+                                    Command="{Binding CollapseAllCommand}" Content="{loc:Loc Action.CollapseAll}" />
+                            <Button Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,4,0"
+                                    Command="{Binding ExportCsvCommand}" Content="{loc:Loc Action.ExportCsv}" />
+                            <Button Style="{StaticResource MaterialDesignFlatButton}"
+                                    Command="{Binding ExportJsonCommand}" Content="{loc:Loc Action.ExportJson}" />
+                        </WrapPanel>
+                    </materialDesign:Card>
+
+                    <!-- Result groups -->
+                    <Grid Grid.Row="2" Margin="8,0">
+                        <!-- Empty states -->
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="{Binding HasScanned, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                            <materialDesign:PackIcon Kind="FolderSearchOutline" Width="72" Height="72"
+                                                     HorizontalAlignment="Center" Opacity="0.3" />
+                            <TextBlock Text="{loc:Loc Results.NoResults}" Opacity="0.5" Margin="0,10,0,0"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding HasScanned}" Value="True" />
+                                                <Condition Binding="{Binding HasResults}" Value="False" />
+                                                <Condition Binding="{Binding IsScanning}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="72" Height="72"
+                                                     HorizontalAlignment="Center" Opacity="0.4"
+                                                     Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                            <TextBlock Text="{loc:Loc Results.NoDuplicates}" Opacity="0.6" Margin="0,10,0,0"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      Visibility="{Binding HasResults, Converter={StaticResource BoolToVis}}">
+                            <ItemsControl ItemsSource="{Binding Groups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:DuplicateGroupViewModel}">
+                                        <materialDesign:Card Margin="0,6" UniformCornerRadius="8"
+                                                             materialDesign:ElevationAssist.Elevation="Dp2">
+                                            <Expander IsExpanded="{Binding IsExpanded}" Background="Transparent">
+                                                <Expander.Header>
+                                                    <WrapPanel Margin="4,4">
+                                                        <materialDesign:Chip Content="{Binding MethodDisplay}" Margin="0,0,8,0"
+                                                                             FontSize="11" />
+                                                        <TextBlock VerticalAlignment="Center" Margin="0,0,12,0">
+                                                            <Run Text="{loc:Loc Results.Group}" />
+                                                            <Run Text="{Binding Index}" FontWeight="Bold" />
+                                                        </TextBlock>
+                                                        <TextBlock VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0.8">
+                                                            <Run Text="{Binding Count, Mode=OneWay}" FontWeight="Bold" />
+                                                            <Run Text="×" />
+                                                        </TextBlock>
+                                                        <materialDesign:PackIcon Kind="Percent" VerticalAlignment="Center"
+                                                                                 Width="14" Height="14" Opacity="0.6" />
+                                                        <TextBlock Text="{Binding SimilarityDisplay}" VerticalAlignment="Center"
+                                                                   Margin="0,0,12,0" Opacity="0.8" />
+                                                        <materialDesign:PackIcon Kind="DeleteSweepOutline" VerticalAlignment="Center"
+                                                                                 Width="16" Height="16" Opacity="0.6" Margin="0,0,4,0" />
+                                                        <TextBlock VerticalAlignment="Center"
+                                                                   Text="{Binding ReclaimableBytes, Converter={StaticResource ByteSize}}"
+                                                                   Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                                    </WrapPanel>
+                                                </Expander.Header>
+
+                                                <DataGrid ItemsSource="{Binding Files}"
+                                                          AutoGenerateColumns="False"
+                                                          CanUserAddRows="False"
+                                                          CanUserDeleteRows="False"
+                                                          HeadersVisibility="Column"
+                                                          IsReadOnly="False"
+                                                          SelectionMode="Extended"
+                                                          materialDesign:DataGridAssist.CellPadding="8,4"
+                                                          Margin="8,0,8,8">
+                                                    <DataGrid.Columns>
+                                                        <DataGridCheckBoxColumn Header="{loc:Loc Grid.Keep}"
+                                                                                Binding="{Binding IsMarkedForRemoval, UpdateSourceTrigger=PropertyChanged}"
+                                                                                Width="Auto" />
+                                                        <DataGridTextColumn Header="{loc:Loc Grid.File}"
+                                                                            Binding="{Binding FileName}" Width="2*" />
+                                                        <DataGridTextColumn Header="{loc:Loc Grid.Folder}"
+                                                                            Binding="{Binding DirectoryName}" Width="3*" />
+                                                        <DataGridTextColumn Header="{loc:Loc Grid.Size}"
+                                                                            Binding="{Binding Length, Converter={StaticResource ByteSize}}"
+                                                                            Width="Auto" />
+                                                        <DataGridTextColumn Header="{loc:Loc Grid.Modified}"
+                                                                            Binding="{Binding LastWriteUtc, Converter={StaticResource UtcToLocal}}"
+                                                                            Width="Auto" />
+                                                        <DataGridTemplateColumn Width="Auto">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                                            Width="28" Height="28" Padding="0"
+                                                                            ToolTip="{loc:Loc Action.OpenFolder}"
+                                                                            Command="{Binding DataContext.OpenLocationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                            CommandParameter="{Binding}">
+                                                                        <materialDesign:PackIcon Kind="FolderOpenOutline" Width="16" Height="16" />
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
+                                                    </DataGrid.Columns>
+                                                    <DataGrid.RowStyle>
+                                                        <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsMarkedForRemoval}" Value="True">
+                                                                    <Setter Property="Background" Value="#22F44336" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </DataGrid.RowStyle>
+                                                </DataGrid>
+                                            </Expander>
+                                        </materialDesign:Card>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Grid>
+
+                    <!-- Bottom action bar -->
+                    <materialDesign:Card Grid.Row="3" Style="{StaticResource Section}"
+                                         Visibility="{Binding HasResults, Converter={StaticResource BoolToVis}}">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="CheckboxMarkedCircleOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock VerticalAlignment="Center">
+                                    <Run Text="{loc:Loc Results.Selected}" />
+                                    <Run Text=": " />
+                                    <Run Text="{Binding SelectedCount, Mode=OneWay}" FontWeight="Bold" />
+                                    <Run Text=" (" /><Run Text="{Binding SelectedSizeDisplay, Mode=OneWay}" FontWeight="Bold" /><Run Text=")" />
+                                </TextBlock>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0"
+                                        Command="{Binding MoveCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FolderMoveOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{loc:Loc Action.MoveTo}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,8,0"
+                                        Command="{Binding RecycleCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="DeleteOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{loc:Loc Action.Recycle}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Command="{Binding DeleteCommand}"
+                                        Background="#F44336" BorderBrush="#F44336"
+                                        Style="{StaticResource MaterialDesignRaisedButton}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="DeleteForeverOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{loc:Loc Action.DeletePermanently}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </DockPanel>
+                    </materialDesign:Card>
+                </Grid>
+            </Grid>
+        </Grid>
+    </materialDesign:DialogHost>
+</Window>

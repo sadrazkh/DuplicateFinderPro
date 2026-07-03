@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <UseWindowsForms>false</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+    <AssemblyName>DuplicateFinderPro.Core</AssemblyName>
+    <RootNamespace>DuplicateFinderPro.Core</RootNamespace>
+    <!-- NU1510: Microsoft.VisualBasic is intentional here (non-desktop lib needs FileIO). -->
+    <NoWarn>$(NoWarn);NU1510</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Cross-platform image decoding for perceptual hashing (no System.Drawing GDI dependency). -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <!-- Recycle-bin aware deletion (FileSystem.DeleteFile + RecycleOption). -->
+    <PackageReference Include="Microsoft.VisualBasic" Version="10.3.0" />
+  </ItemGroup>
+
+</Project>
