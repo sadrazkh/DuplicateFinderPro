@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]        # e.g. v1.0.0
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (without leading v), e.g. 1.0.0'
+        required: true
+        default: '1.0.0'
+
+permissions:
+  contents: write          # needed to create the GitHub Release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          $v = if ($env:GITHUB_REF -like 'refs/tags/*') { "${{ github.ref_name }}".TrimStart('v') } else { "${{ github.event.inputs.version }}" }
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+          echo "Building version $v"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Test
+        run: dotnet test -c Release
+
+      # ---------- Portable (single self-contained exe) ----------
+      - name: Publish portable
+        run: >
+          dotnet publish src/DuplicateFinderPro.App/DuplicateFinderPro.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o publish/portable
+
+      - name: Zip portable
+        shell: pwsh
+        run: Compress-Archive -Path publish/portable/* -DestinationPath "DuplicateFinderPro-${{ steps.ver.outputs.version }}-portable-win-x64.zip" -Force
+
+      # ---------- Installer (Inno Setup over a self-contained folder) ----------
+      - name: Publish app for installer
+        run: >
+          dotnet publish src/DuplicateFinderPro.App/DuplicateFinderPro.App.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=false
+          -p:Version=${{ steps.ver.outputs.version }}
+          -o publish/app
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.ver.outputs.version }} installer\DuplicateFinderPro.iss
+
+      # ---------- Publish artifacts / release ----------
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DuplicateFinderPro-${{ steps.ver.outputs.version }}
+          path: |
+            DuplicateFinderPro-*-portable-win-x64.zip
+            installer/Output/*.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Duplicate Finder Pro ${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: |
+            DuplicateFinderPro-*-portable-win-x64.zip
+            installer/Output/*.exe

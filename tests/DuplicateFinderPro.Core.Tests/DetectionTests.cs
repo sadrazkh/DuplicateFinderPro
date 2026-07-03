@@ -56,6 +56,23 @@ public sealed class DetectionTests : IDisposable
     }
 
     [Fact]
+    public async Task ExactContent_finds_duplicates_across_deeply_nested_folders()
+    {
+        // The same movie dropped into two completely separate branch trees.
+        Write(@"Movies\Action\rip1\the.movie.1080p.mkv", "IDENTICAL MOVIE BYTES");
+        Write(@"Downloads\torrents\Some Folder\another name.mkv", "IDENTICAL MOVIE BYTES");
+        Write(@"Backup\2024\misc\unrelated.mkv", "different bytes here");
+
+        var result = await ScanAsync(DetectionMethod.ExactContent);
+
+        var group = Assert.Single(result.Groups);
+        Assert.Equal(2, group.Count);
+        // Confirm the two hits really live in different directories.
+        var dirs = group.Files.Select(f => f.DirectoryName).Distinct().Count();
+        Assert.Equal(2, dirs);
+    }
+
+    [Fact]
     public async Task ExactContent_ignores_same_size_but_different_content()
     {
         Write("a.bin", "AAAAAAAAAA"); // 10 chars

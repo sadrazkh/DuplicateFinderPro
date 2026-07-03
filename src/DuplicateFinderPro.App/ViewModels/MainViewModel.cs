@@ -17,6 +17,7 @@ public sealed class MainViewModel : ObservableObject
     private readonly DialogService _dialogs;
     private readonly ThemeManager _theme;
     private readonly FileActionService _fileActions = new();
+    private readonly FfmpegInstaller _ffmpegInstaller = new();
     private CancellationTokenSource? _cts;
 
     public MainViewModel(DialogService dialogs, ThemeManager theme)
@@ -45,6 +46,9 @@ public sealed class MainViewModel : ObservableObject
         CollapseAllCommand = new RelayCommand(_ => SetExpanded(false), _ => HasResults);
         ToggleThemeCommand = new RelayCommand(_ => _theme.Toggle());
         SetLanguageCommand = new RelayCommand(p => SetLanguage(p));
+        DownloadFfmpegCommand = new AsyncRelayCommand(DownloadFfmpegAsync, () => !IsDownloadingFfmpeg);
+
+        RefreshFfmpegStatus();
     }
 
     // ---- Configuration ----------------------------------------------------
@@ -100,7 +104,29 @@ public sealed class MainViewModel : ObservableObject
     public bool GentleResourceUsage { get => _gentleResourceUsage; set => SetProperty(ref _gentleResourceUsage, value); }
 
     private string _ffmpegPath = string.Empty;
-    public string FfmpegPath { get => _ffmpegPath; set => SetProperty(ref _ffmpegPath, value); }
+    public string FfmpegPath
+    {
+        get => _ffmpegPath;
+        set { if (SetProperty(ref _ffmpegPath, value)) RefreshFfmpegStatus(); }
+    }
+
+    private bool _isDownloadingFfmpeg;
+    public bool IsDownloadingFfmpeg
+    {
+        get => _isDownloadingFfmpeg;
+        private set { if (SetProperty(ref _isDownloadingFfmpeg, value)) OnPropertyChanged(nameof(CanEditFfmpegPath)); }
+    }
+
+    public bool CanEditFfmpegPath => !_isDownloadingFfmpeg;
+
+    private double _ffmpegDownloadProgress;
+    public double FfmpegDownloadProgress { get => _ffmpegDownloadProgress; private set => SetProperty(ref _ffmpegDownloadProgress, value); }
+
+    private string _ffmpegStatus = string.Empty;
+    public string FfmpegStatus { get => _ffmpegStatus; private set => SetProperty(ref _ffmpegStatus, value); }
+
+    private bool _ffmpegReady;
+    public bool FfmpegReady { get => _ffmpegReady; private set => SetProperty(ref _ffmpegReady, value); }
 
     public IReadOnlyList<KeepRuleOption> KeepRules => KeepRuleOption.All;
 
@@ -193,6 +219,7 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand CollapseAllCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
     public RelayCommand SetLanguageCommand { get; }
+    public AsyncRelayCommand DownloadFfmpegCommand { get; }
 
     // ---- Folder management ------------------------------------------------
 
@@ -495,6 +522,46 @@ public sealed class MainViewModel : ObservableObject
     private void SetExpanded(bool expanded)
     {
         foreach (var g in Groups) g.IsExpanded = expanded;
+    }
+
+    // ---- ffmpeg auto-provisioning ----------------------------------------
+
+    private async Task DownloadFfmpegAsync()
+    {
+        IsDownloadingFfmpeg = true;
+        FfmpegDownloadProgress = 0;
+        FfmpegStatus = L("Ffmpeg.Downloading");
+        try
+        {
+            var progress = new Progress<double>(p => FfmpegDownloadProgress = p);
+            var path = await _ffmpegInstaller.InstallAsync(progress, CancellationToken.None);
+            FfmpegPath = path;
+            FfmpegStatus = L("Ffmpeg.Done");
+        }
+        catch (Exception ex)
+        {
+            FfmpegStatus = L("Ffmpeg.Failed");
+            _dialogs.Warn(ex.Message, L("Ffmpeg.Failed"));
+        }
+        finally
+        {
+            IsDownloadingFfmpeg = false;
+            RefreshFfmpegStatus();
+        }
+    }
+
+    private void RefreshFfmpegStatus()
+    {
+        // Adopt a previously downloaded copy if the user hasn't set an explicit path.
+        if (string.IsNullOrWhiteSpace(_ffmpegPath) && _ffmpegInstaller.IsInstalled)
+        {
+            _ffmpegPath = _ffmpegInstaller.FfmpegExePath;
+            OnPropertyChanged(nameof(FfmpegPath));
+        }
+
+        FfmpegReady = !string.IsNullOrWhiteSpace(_ffmpegPath) || _ffmpegInstaller.IsInstalled;
+        if (!IsDownloadingFfmpeg)
+            FfmpegStatus = FfmpegReady ? L("Ffmpeg.Ready") : L("Ffmpeg.Missing");
     }
 
     // ---- Settings persistence --------------------------------------------

@@ -49,6 +49,13 @@ internal static class Strings
         ["Adv.VideoDesc"] = "از سراسر مدت فیلم چند فریم نمونه گرفته می‌شود (نه فقط ابتدا) تا فیلم‌هایی با تیتراژ یکسان اشتباه ادغام نشوند. فریم بیشتر = دقیق‌تر ولی کندتر.",
         ["Adv.GentleDesc"] = "تحلیل رسانه با اولویت پایین و هم‌زمانی محدود اجرا می‌شود تا سیستم کند نشود.",
 
+        ["Action.DownloadFfmpeg"] = "دانلود خودکار ffmpeg",
+        ["Ffmpeg.Ready"] = "‏ffmpeg آماده است ✓",
+        ["Ffmpeg.Missing"] = "‏ffmpeg یافت نشد — برای تشخیص ویدیو لازم است",
+        ["Ffmpeg.Downloading"] = "در حال دانلود ffmpeg…",
+        ["Ffmpeg.Done"] = "‏ffmpeg با موفقیت نصب شد ✓",
+        ["Ffmpeg.Failed"] = "دانلود ffmpeg ناموفق بود",
+
         ["Method.ExactContent"] = "محتوای دقیقاً یکسان (Hash)",
         ["Method.ExactContent.Desc"] = "فایل‌های بایت‌به‌بایت یکسان، حتی با نام متفاوت",
         ["Method.NameSimilarity"] = "شباهت نام فایل",
@@ -175,6 +182,13 @@ internal static class Strings
         ["Adv.ImageDesc"] = "Compares perceptual fingerprints (dHash) of images; survives resize, recompression and format changes. Lower number = stricter.",
         ["Adv.VideoDesc"] = "Samples frames from across the whole runtime (not just the start) so films with similar intros aren't merged. More samples = more accurate but slower.",
         ["Adv.GentleDesc"] = "Runs media analysis at low priority with limited concurrency so the machine stays responsive.",
+
+        ["Action.DownloadFfmpeg"] = "Download ffmpeg automatically",
+        ["Ffmpeg.Ready"] = "ffmpeg is ready ✓",
+        ["Ffmpeg.Missing"] = "ffmpeg not found — required for video matching",
+        ["Ffmpeg.Downloading"] = "Downloading ffmpeg…",
+        ["Ffmpeg.Done"] = "ffmpeg installed successfully ✓",
+        ["Ffmpeg.Failed"] = "ffmpeg download failed",
 
         ["Method.ExactContent"] = "Exact content (hash)",
         ["Method.ExactContent.Desc"] = "Byte-for-byte identical files, even with different names",
