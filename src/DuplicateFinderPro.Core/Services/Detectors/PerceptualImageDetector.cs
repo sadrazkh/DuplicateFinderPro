@@ -23,7 +23,9 @@ public sealed class PerceptualImageDetector : IDuplicateDetector
         if (images.Count < 2)
             return Array.Empty<DuplicateGroup>();
 
-        var dop = options.MaxDegreeOfParallelism > 0 ? options.MaxDegreeOfParallelism : Environment.ProcessorCount;
+        var dop = options.MaxDegreeOfParallelism > 0
+            ? options.MaxDegreeOfParallelism
+            : (options.GentleResourceUsage ? Math.Max(1, Environment.ProcessorCount / 2) : Environment.ProcessorCount);
         var processed = 0L;
 
         await Parallel.ForEachAsync(

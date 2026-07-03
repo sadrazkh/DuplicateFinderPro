@@ -1,9 +1,45 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
 using DuplicateFinderPro.Core.Utils;
 
 namespace DuplicateFinderPro.App.Converters;
+
+/// <summary>
+/// Loads a small, decoded-once thumbnail for an image path. Decodes at reduced
+/// resolution so hovering hundreds of rows never blows up memory, and never
+/// keeps a file lock (OnLoad cache option).
+/// </summary>
+public sealed class ThumbnailConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        var path = value as string;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
+
+        try
+        {
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = BitmapCacheOption.OnLoad;
+            bmp.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            bmp.DecodePixelWidth = 240;
+            bmp.UriSource = new Uri(path);
+            bmp.EndInit();
+            bmp.Freeze();
+            return bmp;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
 
 /// <summary>long bytes → "1.2 MB".</summary>
 public sealed class ByteSizeConverter : IValueConverter

@@ -6,7 +6,7 @@ namespace DuplicateFinderPro.App.Services;
 /// <summary>Serializable snapshot of everything worth remembering between runs.</summary>
 public sealed class AppSettings
 {
-    public AppLanguage Language { get; set; } = AppLanguage.Persian;
+    public AppLanguage Language { get; set; } = AppLanguage.English;
     public bool Dark { get; set; }
 
     public bool UseExactContent { get; set; } = true;
@@ -23,7 +23,10 @@ public sealed class AppSettings
 
     public double NameThreshold { get; set; } = 0.85;
     public int PerceptualThreshold { get; set; } = 8;
-    public int VideoSamples { get; set; } = 5;
+    public int VideoSamples { get; set; } = 12;
+    public int VideoIntroSkipPercent { get; set; } = 8;
+    public int VideoOutroSkipPercent { get; set; } = 5;
+    public bool GentleResourceUsage { get; set; } = true;
     public string FfmpegPath { get; set; } = string.Empty;
 
     public KeepRule KeepRule { get; set; } = KeepRule.Newest;

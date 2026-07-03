@@ -35,7 +35,7 @@ public sealed class PerceptualVideoDetector : IDuplicateDetector
             return Array.Empty<DuplicateGroup>();
 
         var signatures = new ConcurrentDictionary<FileItem, VideoSignature>();
-        var dop = Math.Max(1, (options.MaxDegreeOfParallelism > 0 ? options.MaxDegreeOfParallelism : Environment.ProcessorCount) / 2);
+        var dop = ResolveVideoConcurrency(options);
         var processed = 0L;
 
         await Parallel.ForEachAsync(
@@ -43,7 +43,7 @@ public sealed class PerceptualVideoDetector : IDuplicateDetector
             new ParallelOptions { MaxDegreeOfParallelism = dop, CancellationToken = ct },
             async (file, token) =>
             {
-                var sig = await _hasher.ComputeAsync(file.FullPath, options.VideoFrameSamples, token);
+                var sig = await _hasher.ComputeAsync(file.FullPath, options, token);
                 if (!sig.IsEmpty) signatures[file] = sig;
 
                 var done = Interlocked.Increment(ref processed);
@@ -80,6 +80,15 @@ public sealed class PerceptualVideoDetector : IDuplicateDetector
             groups.Add(new DuplicateGroup(Method, members, $"video:{members.Count}", FrameMatchFraction));
         }
         return groups;
+    }
+
+    private static int ResolveVideoConcurrency(ScanOptions options)
+    {
+        if (options.MaxConcurrentVideoJobs > 0)
+            return options.MaxConcurrentVideoJobs;
+        // Auto: keep it light — half the cores when gentle, otherwise all but one.
+        var cores = Environment.ProcessorCount;
+        return options.GentleResourceUsage ? Math.Max(1, cores / 2) : Math.Max(1, cores - 1);
     }
 
     /// <summary>

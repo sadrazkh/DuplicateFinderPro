@@ -20,6 +20,7 @@
             <conv:CountToVisibilityConverter x:Key="CountToVis" />
             <conv:StringToVisibilityConverter x:Key="StringToVis" />
             <conv:UtcToLocalConverter x:Key="UtcToLocal" />
+            <conv:ThumbnailConverter x:Key="Thumbnail" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

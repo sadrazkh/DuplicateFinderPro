@@ -16,10 +16,10 @@ public sealed class Localization : INotifyPropertyChanged
 {
     public static Localization Instance { get; } = new();
 
-    private IReadOnlyDictionary<string, string> _table = Strings.Fa;
-    private AppLanguage _language = AppLanguage.Persian;
+    private IReadOnlyDictionary<string, string> _table = Strings.En;
+    private AppLanguage _language = AppLanguage.English;
 
-    private Localization() => Apply(AppLanguage.Persian);
+    private Localization() => Apply(AppLanguage.English);
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

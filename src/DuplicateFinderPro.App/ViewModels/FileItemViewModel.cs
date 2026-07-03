@@ -1,5 +1,6 @@
 using DuplicateFinderPro.App.Mvvm;
 using DuplicateFinderPro.Core.Models;
+using DuplicateFinderPro.Core.Utils;
 
 namespace DuplicateFinderPro.App.ViewModels;
 
@@ -17,6 +18,10 @@ public sealed class FileItemViewModel : ObservableObject
     public string FullPath => Model.FullPath;
     public long Length => Model.Length;
     public DateTime LastWriteUtc => Model.LastWriteUtc;
+    public string Extension => Model.Extension;
+
+    /// <summary>True for raster image files (enables the hover thumbnail preview).</summary>
+    public bool IsImage => MediaTypes.IsImage(Model.Extension);
 
     /// <summary>When true, this file is a redundant copy the user wants removed.</summary>
     public bool IsMarkedForRemoval

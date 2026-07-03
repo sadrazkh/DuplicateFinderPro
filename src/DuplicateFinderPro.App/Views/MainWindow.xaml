@@ -200,34 +200,100 @@
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Advanced}" />
 
-                                <TextBlock Text="{loc:Loc Config.NameThreshold}" FontSize="12" Opacity="0.8" />
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
-                                               Text="{Binding NameThreshold, StringFormat={}{0:P0}}" VerticalAlignment="Center" />
-                                    <Slider Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                                            Value="{Binding NameThreshold}" Margin="0,0,8,0" />
-                                </DockPanel>
+                                <!-- Name matching -->
+                                <StackPanel Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FormTextbox" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
+                                        <TextBlock Text="{loc:Loc Adv.NameSection}" FontWeight="Medium" />
+                                    </StackPanel>
+                                    <TextBlock Text="{loc:Loc Adv.NameDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                   Text="{Binding NameThreshold, StringFormat={}{0:P0}}" VerticalAlignment="Center" />
+                                        <Slider Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                                ToolTip="{loc:Loc Config.NameThreshold}"
+                                                Value="{Binding NameThreshold}" Margin="0,0,8,0" />
+                                    </DockPanel>
+                                </StackPanel>
 
-                                <TextBlock Text="{loc:Loc Config.PerceptualThreshold}" FontSize="12" Opacity="0.8" Margin="0,8,0,0" />
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
-                                               Text="{Binding PerceptualThreshold}" VerticalAlignment="Center" />
-                                    <Slider Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True"
-                                            Value="{Binding PerceptualThreshold}" Margin="0,0,8,0" />
-                                </DockPanel>
+                                <Separator Margin="0,10" Opacity="0.4" />
 
-                                <TextBlock Text="{loc:Loc Config.VideoSamples}" FontSize="12" Opacity="0.8" Margin="0,8,0,0" />
-                                <DockPanel>
-                                    <TextBlock DockPanel.Dock="Right" MinWidth="42" TextAlignment="Center"
-                                               Text="{Binding VideoSamples}" VerticalAlignment="Center" />
-                                    <Slider Minimum="1" Maximum="20" TickFrequency="1" IsSnapToTickEnabled="True"
-                                            Value="{Binding VideoSamples}" Margin="0,0,8,0" />
-                                </DockPanel>
+                                <!-- Images -->
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ImageMultipleOutline" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
+                                        <TextBlock Text="{loc:Loc Adv.ImageSection}" FontWeight="Medium" />
+                                    </StackPanel>
+                                    <TextBlock Text="{loc:Loc Adv.ImageDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                   Text="{Binding PerceptualThreshold}" VerticalAlignment="Center" />
+                                        <Slider Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                ToolTip="{loc:Loc Config.PerceptualThreshold}"
+                                                Value="{Binding PerceptualThreshold}" Margin="0,0,8,0" />
+                                    </DockPanel>
+                                </StackPanel>
 
-                                <TextBox Margin="0,10,0,0"
-                                         materialDesign:HintAssist.Hint="{loc:Loc Config.Ffmpeg}"
-                                         Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                                         Text="{Binding FfmpegPath, UpdateSourceTrigger=PropertyChanged}" />
+                                <Separator Margin="0,10" Opacity="0.4" />
+
+                                <!-- Videos -->
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="MovieOpenOutline" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
+                                        <TextBlock Text="{loc:Loc Adv.VideoSection}" FontWeight="Medium" />
+                                    </StackPanel>
+                                    <TextBlock Text="{loc:Loc Adv.VideoDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
+
+                                    <TextBlock Text="{loc:Loc Config.VideoSamples}" FontSize="12" Opacity="0.8" Margin="0,4,0,0" />
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                   Text="{Binding VideoSamples}" VerticalAlignment="Center" />
+                                        <Slider Minimum="2" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                Value="{Binding VideoSamples}" Margin="0,0,8,0" />
+                                    </DockPanel>
+
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{loc:Loc Config.VideoIntroSkip}" FontSize="12" Opacity="0.8" />
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
+                                                           Text="{Binding VideoIntroSkip}" VerticalAlignment="Center" />
+                                                <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                        Value="{Binding VideoIntroSkip}" Margin="0,0,6,0" />
+                                            </DockPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{loc:Loc Config.VideoOutroSkip}" FontSize="12" Opacity="0.8" />
+                                            <DockPanel>
+                                                <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
+                                                           Text="{Binding VideoOutroSkip}" VerticalAlignment="Center" />
+                                                <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                        Value="{Binding VideoOutroSkip}" Margin="0,0,6,0" />
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <TextBox Margin="0,10,0,0"
+                                             materialDesign:HintAssist.Hint="{loc:Loc Config.Ffmpeg}"
+                                             materialDesign:HintAssist.HelperText="ffmpeg + ffprobe"
+                                             Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                                             Text="{Binding FfmpegPath, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+
+                                <Separator Margin="0,10" Opacity="0.4" />
+
+                                <!-- Resource usage -->
+                                <CheckBox IsChecked="{Binding GentleResourceUsage}" Margin="0,2">
+                                    <StackPanel>
+                                        <TextBlock Text="{loc:Loc Config.Gentle}" FontWeight="Medium" />
+                                        <TextBlock Text="{loc:Loc Adv.GentleDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </CheckBox>
                             </StackPanel>
                         </materialDesign:Card>
 
@@ -433,8 +499,33 @@
                                                         <DataGridCheckBoxColumn Header="{loc:Loc Grid.Keep}"
                                                                                 Binding="{Binding IsMarkedForRemoval, UpdateSourceTrigger=PropertyChanged}"
                                                                                 Width="Auto" />
-                                                        <DataGridTextColumn Header="{loc:Loc Grid.File}"
-                                                                            Binding="{Binding FileName}" Width="2*" />
+                                                        <DataGridTemplateColumn Header="{loc:Loc Grid.File}" Width="2*"
+                                                                                SortMemberPath="FileName">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <materialDesign:PackIcon Kind="ImageOutline" VerticalAlignment="Center"
+                                                                                                 Margin="0,0,6,0" Opacity="0.7"
+                                                                                                 Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}}" />
+                                                                        <materialDesign:PackIcon Kind="FileOutline" VerticalAlignment="Center"
+                                                                                                 Margin="0,0,6,0" Opacity="0.5"
+                                                                                                 Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                                                                        <TextBlock Text="{Binding FileName}" VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                        <StackPanel.ToolTip>
+                                                                            <ToolTip>
+                                                                                <StackPanel MaxWidth="260">
+                                                                                    <Image Stretch="Uniform" MaxHeight="180" Margin="0,0,0,6"
+                                                                                           Source="{Binding FullPath, Converter={StaticResource Thumbnail}}"
+                                                                                           Visibility="{Binding IsImage, Converter={StaticResource BoolToVis}}" />
+                                                                                    <TextBlock Text="{Binding FullPath}" TextWrapping="Wrap" FontSize="11" />
+                                                                                </StackPanel>
+                                                                            </ToolTip>
+                                                                        </StackPanel.ToolTip>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
                                                         <DataGridTextColumn Header="{loc:Loc Grid.Folder}"
                                                                             Binding="{Binding DirectoryName}" Width="3*" />
                                                         <DataGridTextColumn Header="{loc:Loc Grid.Size}"

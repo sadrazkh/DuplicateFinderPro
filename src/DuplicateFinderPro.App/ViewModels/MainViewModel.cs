@@ -87,8 +87,17 @@ public sealed class MainViewModel : ObservableObject
     private int _perceptualThreshold = 8;
     public int PerceptualThreshold { get => _perceptualThreshold; set => SetProperty(ref _perceptualThreshold, Math.Clamp(value, 0, 32)); }
 
-    private int _videoSamples = 5;
-    public int VideoSamples { get => _videoSamples; set => SetProperty(ref _videoSamples, Math.Clamp(value, 1, 30)); }
+    private int _videoSamples = 12;
+    public int VideoSamples { get => _videoSamples; set => SetProperty(ref _videoSamples, Math.Clamp(value, 2, 60)); }
+
+    private int _videoIntroSkip = 8;
+    public int VideoIntroSkip { get => _videoIntroSkip; set => SetProperty(ref _videoIntroSkip, Math.Clamp(value, 0, 40)); }
+
+    private int _videoOutroSkip = 5;
+    public int VideoOutroSkip { get => _videoOutroSkip; set => SetProperty(ref _videoOutroSkip, Math.Clamp(value, 0, 40)); }
+
+    private bool _gentleResourceUsage = true;
+    public bool GentleResourceUsage { get => _gentleResourceUsage; set => SetProperty(ref _gentleResourceUsage, value); }
 
     private string _ffmpegPath = string.Empty;
     public string FfmpegPath { get => _ffmpegPath; set => SetProperty(ref _ffmpegPath, value); }
@@ -282,6 +291,9 @@ public sealed class MainViewModel : ObservableObject
         NameSimilarityThreshold = NameThreshold,
         PerceptualThreshold = PerceptualThreshold,
         VideoFrameSamples = VideoSamples,
+        VideoIntroSkipPercent = VideoIntroSkip,
+        VideoOutroSkipPercent = VideoOutroSkip,
+        GentleResourceUsage = GentleResourceUsage,
         FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? null : FfmpegPath,
     };
 
@@ -502,6 +514,9 @@ public sealed class MainViewModel : ObservableObject
         NameThreshold = s.NameThreshold;
         PerceptualThreshold = s.PerceptualThreshold;
         VideoSamples = s.VideoSamples;
+        VideoIntroSkip = s.VideoIntroSkipPercent;
+        VideoOutroSkip = s.VideoOutroSkipPercent;
+        GentleResourceUsage = s.GentleResourceUsage;
         FfmpegPath = s.FfmpegPath;
         SelectedKeepRule = KeepRuleOption.All.FirstOrDefault(k => k.Rule == s.KeepRule) ?? KeepRuleOption.All[0];
 
@@ -525,6 +540,9 @@ public sealed class MainViewModel : ObservableObject
         s.NameThreshold = NameThreshold;
         s.PerceptualThreshold = PerceptualThreshold;
         s.VideoSamples = VideoSamples;
+        s.VideoIntroSkipPercent = VideoIntroSkip;
+        s.VideoOutroSkipPercent = VideoOutroSkip;
+        s.GentleResourceUsage = GentleResourceUsage;
         s.FfmpegPath = FfmpegPath;
         s.KeepRule = SelectedKeepRule.Rule;
         s.Folders = Folders.ToList();

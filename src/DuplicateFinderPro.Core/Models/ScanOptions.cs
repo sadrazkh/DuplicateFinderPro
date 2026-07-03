@@ -41,12 +41,31 @@ public sealed class ScanOptions
     /// <summary>Max Hamming distance between perceptual hashes to be a match (0..64).</summary>
     public int PerceptualThreshold { get; set; } = 8;
 
-    /// <summary>Number of frames sampled per video for perceptual video matching.</summary>
-    public int VideoFrameSamples { get; set; } = 5;
+    /// <summary>
+    /// Number of frames sampled per video for perceptual video matching. Frames
+    /// are spread evenly across the whole runtime (not just the start) so that
+    /// films with identical intros are still distinguished by their bodies.
+    /// </summary>
+    public int VideoFrameSamples { get; set; } = 12;
+
+    /// <summary>Percentage of the start to skip (intros/logos/black frames).</summary>
+    public int VideoIntroSkipPercent { get; set; } = 8;
+
+    /// <summary>Percentage of the end to skip (credits/outros).</summary>
+    public int VideoOutroSkipPercent { get; set; } = 5;
 
     /// <summary>Optional explicit path to the ffmpeg executable.</summary>
     public string? FfmpegPath { get; set; }
 
     /// <summary>Degree of parallelism for hashing (0 = processor count).</summary>
     public int MaxDegreeOfParallelism { get; set; }
+
+    /// <summary>
+    /// When true, media work runs at below-normal priority with capped
+    /// concurrency and single-threaded ffmpeg so the machine stays responsive.
+    /// </summary>
+    public bool GentleResourceUsage { get; set; } = true;
+
+    /// <summary>Max videos decoded in parallel (each ffmpeg is heavy). 0 = auto.</summary>
+    public int MaxConcurrentVideoJobs { get; set; } = 2;
 }
