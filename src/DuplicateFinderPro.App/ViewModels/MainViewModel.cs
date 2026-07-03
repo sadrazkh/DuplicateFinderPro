@@ -36,6 +36,11 @@ public sealed class MainViewModel : ObservableObject
         ExportCsvCommand = new AsyncRelayCommand(ExportCsvAsync, () => HasResults);
         ExportJsonCommand = new AsyncRelayCommand(ExportJsonAsync, () => HasResults);
         OpenLocationCommand = new RelayCommand(p => OpenLocation(p as FileItemViewModel));
+        OpenFileCommand = new RelayCommand(p => OpenFile(p as FileItemViewModel));
+        CopyPathCommand = new RelayCommand(p => CopyToClipboard((p as FileItemViewModel)?.FullPath));
+        CopyFolderCommand = new RelayCommand(p => CopyToClipboard((p as FileItemViewModel)?.DirectoryName));
+        SelectGroupRedundantCommand = new RelayCommand(p => SelectGroupRedundant(p as DuplicateGroupViewModel));
+        ClearGroupSelectionCommand = new RelayCommand(p => ClearGroupSelection(p as DuplicateGroupViewModel));
         ExpandAllCommand = new RelayCommand(_ => SetExpanded(true), _ => HasResults);
         CollapseAllCommand = new RelayCommand(_ => SetExpanded(false), _ => HasResults);
         ToggleThemeCommand = new RelayCommand(_ => _theme.Toggle());
@@ -149,6 +154,13 @@ public sealed class MainViewModel : ObservableObject
 
     public int GroupCount => Groups.Count;
 
+    private string _filterText = string.Empty;
+    public string FilterText
+    {
+        get => _filterText;
+        set { if (SetProperty(ref _filterText, value)) ApplyFilter(); }
+    }
+
     // ---- Commands ---------------------------------------------------------
 
     public RelayCommand AddFolderCommand { get; }
@@ -163,6 +175,11 @@ public sealed class MainViewModel : ObservableObject
     public AsyncRelayCommand ExportCsvCommand { get; }
     public AsyncRelayCommand ExportJsonCommand { get; }
     public RelayCommand OpenLocationCommand { get; }
+    public RelayCommand OpenFileCommand { get; }
+    public RelayCommand CopyPathCommand { get; }
+    public RelayCommand CopyFolderCommand { get; }
+    public RelayCommand SelectGroupRedundantCommand { get; }
+    public RelayCommand ClearGroupSelectionCommand { get; }
     public RelayCommand ExpandAllCommand { get; }
     public RelayCommand CollapseAllCommand { get; }
     public RelayCommand ToggleThemeCommand { get; }
@@ -424,9 +441,93 @@ public sealed class MainViewModel : ObservableObject
         catch { /* ignore shell failures */ }
     }
 
+    private void OpenFile(FileItemViewModel? file)
+    {
+        if (file is null || !File.Exists(file.FullPath)) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo(file.FullPath) { UseShellExecute = true });
+        }
+        catch { /* ignore shell failures */ }
+    }
+
+    private static void CopyToClipboard(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        try { System.Windows.Clipboard.SetText(text); } catch { /* clipboard may be busy */ }
+    }
+
+    private void SelectGroupRedundant(DuplicateGroupViewModel? group)
+    {
+        if (group is null) return;
+        var redundant = new HashSet<string>(
+            DuplicateSelector.Redundant(group.Model, SelectedKeepRule.Rule).Select(f => f.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+        foreach (var file in group.Files)
+            file.IsMarkedForRemoval = redundant.Contains(file.FullPath);
+        RefreshSelection();
+    }
+
+    private void ClearGroupSelection(DuplicateGroupViewModel? group)
+    {
+        if (group is null) return;
+        foreach (var file in group.Files) file.IsMarkedForRemoval = false;
+        RefreshSelection();
+    }
+
+    private void ApplyFilter()
+    {
+        foreach (var group in Groups) group.ApplyFilter(_filterText);
+    }
+
     private void SetExpanded(bool expanded)
     {
         foreach (var g in Groups) g.IsExpanded = expanded;
+    }
+
+    // ---- Settings persistence --------------------------------------------
+
+    public void ApplySettings(AppSettings s)
+    {
+        UseExactContent = s.UseExactContent;
+        UseNameSimilarity = s.UseNameSimilarity;
+        UsePerceptualImage = s.UsePerceptualImage;
+        UsePerceptualVideo = s.UsePerceptualVideo;
+        Recursive = s.Recursive;
+        IncludeHidden = s.IncludeHidden;
+        MinSizeKb = s.MinSizeKb;
+        MaxSizeKb = s.MaxSizeKb;
+        IncludeExtensions = s.IncludeExtensions;
+        ExcludeExtensions = s.ExcludeExtensions;
+        NameThreshold = s.NameThreshold;
+        PerceptualThreshold = s.PerceptualThreshold;
+        VideoSamples = s.VideoSamples;
+        FfmpegPath = s.FfmpegPath;
+        SelectedKeepRule = KeepRuleOption.All.FirstOrDefault(k => k.Rule == s.KeepRule) ?? KeepRuleOption.All[0];
+
+        Folders.Clear();
+        foreach (var folder in s.Folders)
+            AddFolder(folder);
+    }
+
+    public void CaptureSettings(AppSettings s)
+    {
+        s.UseExactContent = UseExactContent;
+        s.UseNameSimilarity = UseNameSimilarity;
+        s.UsePerceptualImage = UsePerceptualImage;
+        s.UsePerceptualVideo = UsePerceptualVideo;
+        s.Recursive = Recursive;
+        s.IncludeHidden = IncludeHidden;
+        s.MinSizeKb = MinSizeKb;
+        s.MaxSizeKb = MaxSizeKb;
+        s.IncludeExtensions = IncludeExtensions;
+        s.ExcludeExtensions = ExcludeExtensions;
+        s.NameThreshold = NameThreshold;
+        s.PerceptualThreshold = PerceptualThreshold;
+        s.VideoSamples = VideoSamples;
+        s.FfmpegPath = FfmpegPath;
+        s.KeepRule = SelectedKeepRule.Rule;
+        s.Folders = Folders.ToList();
     }
 
     // ---- Export -----------------------------------------------------------

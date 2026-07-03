@@ -14,12 +14,33 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnUnhandledException;
 
+        var settings = SettingsStore.Load();
+
         var dialogs = new DialogService();
         var theme = new ThemeManager();
-        theme.SetDark(false);
+        theme.SetDark(settings.Dark);
+        Localization.Localization.Instance.Language = settings.Language;
 
         var viewModel = new MainViewModel(dialogs, theme);
+        viewModel.ApplySettings(settings);
+
         var window = new MainWindow { DataContext = viewModel };
+        if (settings.WindowWidth >= 900 && settings.WindowHeight >= 600)
+        {
+            window.Width = settings.WindowWidth;
+            window.Height = settings.WindowHeight;
+        }
+
+        window.Closing += (_, _) =>
+        {
+            viewModel.CaptureSettings(settings);
+            settings.Language = Localization.Localization.Instance.Language;
+            settings.Dark = theme.IsDark;
+            settings.WindowWidth = window.ActualWidth;
+            settings.WindowHeight = window.ActualHeight;
+            SettingsStore.Save(settings);
+        };
+
         window.Show();
     }
 

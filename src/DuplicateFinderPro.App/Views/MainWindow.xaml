@@ -252,7 +252,7 @@
                                 </Button>
 
                                 <ProgressBar Margin="0,14,0,6" Height="6"
-                                             Value="{Binding ProgressValue}"
+                                             Value="{Binding ProgressValue, Mode=OneWay}"
                                              IsIndeterminate="{Binding IsIndeterminate}"
                                              Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}" />
                                 <TextBlock Text="{Binding StatusText}" FontWeight="Medium" />
@@ -324,6 +324,13 @@
                                     Command="{Binding ExportCsvCommand}" Content="{loc:Loc Action.ExportCsv}" />
                             <Button Style="{StaticResource MaterialDesignFlatButton}"
                                     Command="{Binding ExportJsonCommand}" Content="{loc:Loc Action.ExportJson}" />
+                            <TextBox MinWidth="200" Margin="8,0,0,0" VerticalAlignment="Center"
+                                     materialDesign:HintAssist.Hint="{loc:Loc Action.Search}"
+                                     materialDesign:TextFieldAssist.HasClearButton="True"
+                                     materialDesign:TextFieldAssist.HasLeadingIcon="True"
+                                     materialDesign:TextFieldAssist.LeadingIcon="Magnify"
+                                     Style="{StaticResource MaterialDesignFilledTextBox}"
+                                     Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged, Delay=200}" />
                         </WrapPanel>
                     </materialDesign:Card>
 
@@ -363,6 +370,12 @@
                         <ScrollViewer VerticalScrollBarVisibility="Auto"
                                       Visibility="{Binding HasResults, Converter={StaticResource BoolToVis}}">
                             <ItemsControl ItemsSource="{Binding Groups}">
+                                <ItemsControl.ItemContainerStyle>
+                                    <Style TargetType="ContentPresenter">
+                                        <Setter Property="Visibility"
+                                                Value="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />
+                                    </Style>
+                                </ItemsControl.ItemContainerStyle>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type vm:DuplicateGroupViewModel}">
                                         <materialDesign:Card Margin="0,6" UniformCornerRadius="8"
@@ -389,10 +402,25 @@
                                                         <TextBlock VerticalAlignment="Center"
                                                                    Text="{Binding ReclaimableBytes, Converter={StaticResource ByteSize}}"
                                                                    Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                                Width="28" Height="28" Padding="0" Margin="10,0,0,0"
+                                                                ToolTip="{loc:Loc Ctx.SelectRedundant}"
+                                                                Command="{Binding DataContext.SelectGroupRedundantCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}">
+                                                            <materialDesign:PackIcon Kind="SelectMultiple" Width="16" Height="16" />
+                                                        </Button>
+                                                        <Button Style="{StaticResource MaterialDesignIconButton}"
+                                                                Width="28" Height="28" Padding="0"
+                                                                ToolTip="{loc:Loc Ctx.ClearGroup}"
+                                                                Command="{Binding DataContext.ClearGroupSelectionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                CommandParameter="{Binding}">
+                                                            <materialDesign:PackIcon Kind="SelectOff" Width="16" Height="16" />
+                                                        </Button>
                                                     </WrapPanel>
                                                 </Expander.Header>
 
                                                 <DataGrid ItemsSource="{Binding Files}"
+                                                          Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
                                                           AutoGenerateColumns="False"
                                                           CanUserAddRows="False"
                                                           CanUserDeleteRows="False"
@@ -438,6 +466,29 @@
                                                             </Style.Triggers>
                                                         </Style>
                                                     </DataGrid.RowStyle>
+                                                    <DataGrid.ContextMenu>
+                                                        <ContextMenu>
+                                                            <MenuItem Header="{loc:Loc Ctx.Open}"
+                                                                      Command="{Binding PlacementTarget.Tag.OpenFileCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                <MenuItem.Icon><materialDesign:PackIcon Kind="FileOutline" /></MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="{loc:Loc Ctx.OpenLocation}"
+                                                                      Command="{Binding PlacementTarget.Tag.OpenLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                <MenuItem.Icon><materialDesign:PackIcon Kind="FolderOpenOutline" /></MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <Separator />
+                                                            <MenuItem Header="{loc:Loc Ctx.CopyPath}"
+                                                                      Command="{Binding PlacementTarget.Tag.CopyPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                                                <MenuItem.Icon><materialDesign:PackIcon Kind="ContentCopy" /></MenuItem.Icon>
+                                                            </MenuItem>
+                                                            <MenuItem Header="{loc:Loc Ctx.CopyFolder}"
+                                                                      Command="{Binding PlacementTarget.Tag.CopyFolderCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                                        </ContextMenu>
+                                                    </DataGrid.ContextMenu>
                                                 </DataGrid>
                                             </Expander>
                                         </materialDesign:Card>

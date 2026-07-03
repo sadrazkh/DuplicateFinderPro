@@ -9,6 +9,7 @@ namespace DuplicateFinderPro.App.ViewModels;
 public sealed class DuplicateGroupViewModel : ObservableObject
 {
     private bool _isExpanded = true;
+    private bool _isVisible = true;
 
     public DuplicateGroupViewModel(int index, DuplicateGroup model)
     {
@@ -44,5 +45,25 @@ public sealed class DuplicateGroupViewModel : ObservableObject
     {
         get => _isExpanded;
         set => SetProperty(ref _isExpanded, value);
+    }
+
+    /// <summary>Whether this group survives the current results filter.</summary>
+    public bool IsVisible
+    {
+        get => _isVisible;
+        private set => SetProperty(ref _isVisible, value);
+    }
+
+    /// <summary>Hides the group unless a file name or path contains the filter text.</summary>
+    public void ApplyFilter(string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            IsVisible = true;
+            return;
+        }
+        IsVisible = Files.Any(f =>
+            f.FileName.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+            f.DirectoryName.Contains(filter, StringComparison.OrdinalIgnoreCase));
     }
 }

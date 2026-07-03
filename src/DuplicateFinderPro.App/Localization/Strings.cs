@@ -60,6 +60,14 @@ internal static class Strings
         ["Action.ClearSelection"] = "پاک کردن انتخاب",
         ["Action.ExpandAll"] = "باز کردن همه",
         ["Action.CollapseAll"] = "بستن همه",
+        ["Action.Search"] = "جست‌وجو در نتایج…",
+
+        ["Ctx.Open"] = "باز کردن فایل",
+        ["Ctx.OpenLocation"] = "باز کردن محل فایل",
+        ["Ctx.CopyPath"] = "کپی مسیر کامل",
+        ["Ctx.CopyFolder"] = "کپی مسیر پوشه",
+        ["Ctx.SelectRedundant"] = "انتخاب نسخه‌های اضافی این گروه",
+        ["Ctx.ClearGroup"] = "پاک کردن انتخاب این گروه",
 
         ["Keep.Rule"] = "نگه‌داشتن بر اساس",
         ["Keep.Newest"] = "جدیدترین",
@@ -168,6 +176,14 @@ internal static class Strings
         ["Action.ClearSelection"] = "Clear selection",
         ["Action.ExpandAll"] = "Expand all",
         ["Action.CollapseAll"] = "Collapse all",
+        ["Action.Search"] = "Search results…",
+
+        ["Ctx.Open"] = "Open file",
+        ["Ctx.OpenLocation"] = "Open file location",
+        ["Ctx.CopyPath"] = "Copy full path",
+        ["Ctx.CopyFolder"] = "Copy folder path",
+        ["Ctx.SelectRedundant"] = "Select redundant copies in this group",
+        ["Ctx.ClearGroup"] = "Clear this group's selection",
 
         ["Keep.Rule"] = "Keep by",
         ["Keep.Newest"] = "Newest",
