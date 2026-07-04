@@ -320,6 +320,9 @@ public sealed class MainViewModel : ObservableObject
         VideoFrameSamples = VideoSamples,
         VideoIntroSkipPercent = VideoIntroSkip,
         VideoOutroSkipPercent = VideoOutroSkip,
+        // Fresh seed each scan → probes different random spots every run,
+        // but identical for all videos in this scan so copies still align.
+        VideoSampleSeed = Random.Shared.Next(1, int.MaxValue),
         GentleResourceUsage = GentleResourceUsage,
         FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? null : FfmpegPath,
     };

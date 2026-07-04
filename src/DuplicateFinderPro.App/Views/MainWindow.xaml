@@ -203,17 +203,31 @@
                                 <!-- Name matching -->
                                 <StackPanel Margin="0,4,0,0">
                                     <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="FormTextbox" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
-                                        <TextBlock Text="{loc:Loc Adv.NameSection}" FontWeight="Medium" />
+                                        <materialDesign:PackIcon Kind="FormTextbox" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Text="{loc:Loc Adv.NameSection}" FontWeight="Medium" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <TextBlock Text="{loc:Loc Adv.NameDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
-                                                   Text="{Binding NameThreshold, StringFormat={}{0:P0}}" VerticalAlignment="Center" />
-                                        <Slider Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                                                ToolTip="{loc:Loc Config.NameThreshold}"
-                                                Value="{Binding NameThreshold}" Margin="0,0,8,0" />
-                                    </DockPanel>
+                                    <TextBlock Text="{loc:Loc Adv.EnableHint}" FontSize="11" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                               Visibility="{Binding UseNameSimilarity, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                                    <StackPanel IsEnabled="{Binding UseNameSimilarity}">
+                                        <TextBlock Text="{loc:Loc Adv.NameDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,2" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                            <TextBlock Text="{loc:Loc Adv.NamePro}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,4">
+                                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#FFB300" />
+                                            <TextBlock Text="{loc:Loc Adv.NameCon}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                       Text="{Binding NameThreshold, StringFormat={}{0:P0}}" VerticalAlignment="Center" />
+                                            <Slider Minimum="0.5" Maximum="1.0" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                                    ToolTip="{loc:Loc Config.NameThreshold}"
+                                                    Value="{Binding NameThreshold}" Margin="0,0,8,0" />
+                                        </DockPanel>
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <Separator Margin="0,10" Opacity="0.4" />
@@ -221,17 +235,31 @@
                                 <!-- Images -->
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="ImageMultipleOutline" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
-                                        <TextBlock Text="{loc:Loc Adv.ImageSection}" FontWeight="Medium" />
+                                        <materialDesign:PackIcon Kind="ImageMultipleOutline" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Text="{loc:Loc Adv.ImageSection}" FontWeight="Medium" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <TextBlock Text="{loc:Loc Adv.ImageDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
-                                                   Text="{Binding PerceptualThreshold}" VerticalAlignment="Center" />
-                                        <Slider Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True"
-                                                ToolTip="{loc:Loc Config.PerceptualThreshold}"
-                                                Value="{Binding PerceptualThreshold}" Margin="0,0,8,0" />
-                                    </DockPanel>
+                                    <TextBlock Text="{loc:Loc Adv.EnableHint}" FontSize="11" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                               Visibility="{Binding UsePerceptualImage, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                                    <StackPanel IsEnabled="{Binding UsePerceptualImage}">
+                                        <TextBlock Text="{loc:Loc Adv.ImageDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,2" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                            <TextBlock Text="{loc:Loc Adv.ImagePro}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,4">
+                                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#FFB300" />
+                                            <TextBlock Text="{loc:Loc Adv.ImageCon}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                       Text="{Binding PerceptualThreshold}" VerticalAlignment="Center" />
+                                            <Slider Minimum="0" Maximum="32" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                    ToolTip="{loc:Loc Config.PerceptualThreshold}"
+                                                    Value="{Binding PerceptualThreshold}" Margin="0,0,8,0" />
+                                        </DockPanel>
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <Separator Margin="0,10" Opacity="0.4" />
@@ -239,46 +267,68 @@
                                 <!-- Videos -->
                                 <StackPanel>
                                     <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="MovieOpenOutline" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.8" />
-                                        <TextBlock Text="{loc:Loc Adv.VideoSection}" FontWeight="Medium" />
+                                        <materialDesign:PackIcon Kind="MovieOpenOutline" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Text="{loc:Loc Adv.VideoSection}" FontWeight="Medium" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <TextBlock Text="{loc:Loc Adv.VideoDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,4" />
-
-                                    <TextBlock Text="{loc:Loc Config.VideoSamples}" FontSize="12" Opacity="0.8" Margin="0,4,0,0" />
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
-                                                   Text="{Binding VideoSamples}" VerticalAlignment="Center" />
-                                        <Slider Minimum="2" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
-                                                Value="{Binding VideoSamples}" Margin="0,0,8,0" />
-                                    </DockPanel>
-
-                                    <Grid Margin="0,4,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="12" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{loc:Loc Config.VideoIntroSkip}" FontSize="12" Opacity="0.8" />
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
-                                                           Text="{Binding VideoIntroSkip}" VerticalAlignment="Center" />
-                                                <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
-                                                        Value="{Binding VideoIntroSkip}" Margin="0,0,6,0" />
-                                            </DockPanel>
+                                    <TextBlock Text="{loc:Loc Adv.EnableHint}" FontSize="11" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                               Visibility="{Binding UsePerceptualVideo, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                                    <StackPanel IsEnabled="{Binding UsePerceptualVideo}">
+                                        <TextBlock Text="{loc:Loc Adv.VideoDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,2" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                            <TextBlock Text="{loc:Loc Adv.VideoPro}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2">
-                                            <TextBlock Text="{loc:Loc Config.VideoOutroSkip}" FontSize="12" Opacity="0.8" />
-                                            <DockPanel>
-                                                <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
-                                                           Text="{Binding VideoOutroSkip}" VerticalAlignment="Center" />
-                                                <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
-                                                        Value="{Binding VideoOutroSkip}" Margin="0,0,6,0" />
-                                            </DockPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,4">
+                                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#FFB300" />
+                                            <TextBlock Text="{loc:Loc Adv.VideoCon}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
                                         </StackPanel>
-                                    </Grid>
 
-                                    <TextBox Margin="0,10,0,0"
+                                        <Border Margin="0,2,0,4" Padding="8,6" CornerRadius="6"
+                                                Background="{DynamicResource MaterialDesignChipBackground}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="ShuffleVariant" Width="16" Height="16" VerticalAlignment="Top" Margin="0,1,6,0"
+                                                                         Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                                <TextBlock Text="{loc:Loc Adv.VideoSampling}" FontSize="11" Opacity="0.8" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <TextBlock Text="{loc:Loc Config.VideoSamples}" FontSize="12" Opacity="0.8" Margin="0,4,0,0" />
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                       Text="{Binding VideoSamples}" VerticalAlignment="Center" />
+                                            <Slider Minimum="2" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                    Value="{Binding VideoSamples}" Margin="0,0,8,0" />
+                                        </DockPanel>
+
+                                        <Grid Margin="0,4,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{loc:Loc Config.VideoIntroSkip}" FontSize="12" Opacity="0.8" />
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
+                                                               Text="{Binding VideoIntroSkip}" VerticalAlignment="Center" />
+                                                    <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                            Value="{Binding VideoIntroSkip}" Margin="0,0,6,0" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="{loc:Loc Config.VideoOutroSkip}" FontSize="12" Opacity="0.8" />
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" MinWidth="34" TextAlignment="Center"
+                                                               Text="{Binding VideoOutroSkip}" VerticalAlignment="Center" />
+                                                    <Slider Minimum="0" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="True"
+                                                            Value="{Binding VideoOutroSkip}" Margin="0,0,6,0" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <TextBox Margin="0,10,0,0"
                                              IsEnabled="{Binding CanEditFfmpegPath}"
                                              materialDesign:HintAssist.Hint="{loc:Loc Config.Ffmpeg}"
                                              materialDesign:HintAssist.HelperText="ffmpeg + ffprobe"
@@ -303,6 +353,7 @@
                                                                  Visibility="{Binding FfmpegReady, Converter={StaticResource BoolToVis}}" />
                                         <TextBlock Text="{Binding FfmpegStatus}" FontSize="11" Opacity="0.75"
                                                    VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
 

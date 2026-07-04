@@ -54,6 +54,15 @@ public sealed class ScanOptions
     /// <summary>Percentage of the end to skip (credits/outros).</summary>
     public int VideoOutroSkipPercent { get; set; } = 5;
 
+    /// <summary>
+    /// Seed shared by every video in a single scan. Sample points are picked
+    /// randomly within evenly-spaced segments using this seed, so the positions
+    /// vary run-to-run (a different "random spot check" each time) yet stay
+    /// identical for all files in the same scan — which keeps two copies of the
+    /// same video aligned so they still match. 0 = deterministic even spacing.
+    /// </summary>
+    public int VideoSampleSeed { get; set; }
+
     /// <summary>Optional explicit path to the ffmpeg executable.</summary>
     public string? FfmpegPath { get; set; }
 

@@ -44,7 +44,12 @@ public sealed class FfmpegVideoHasher
         IsAvailable = ToolExists(_ffmpeg);
     }
 
-    /// <summary>Samples frames spread across the runtime and hashes each.</summary>
+    /// <summary>
+    /// Samples frames from random positions spread across the whole runtime and
+    /// hashes each. Positions are one-per-segment random picks (see
+    /// <see cref="ScanOptions.VideoSampleSeed"/>) so the check covers the entire
+    /// film — beginning, middle and end — not just its edges.
+    /// </summary>
     public async Task<VideoSignature> ComputeAsync(string path, ScanOptions options, CancellationToken ct)
     {
         if (!IsAvailable) return new VideoSignature(Array.Empty<ulong>());
@@ -52,17 +57,20 @@ public sealed class FfmpegVideoHasher
         var frameCount = Math.Clamp(options.VideoFrameSamples, 2, 60);
         var duration = await ProbeDurationSecondsAsync(path, ct);
 
-        byte[]? payload = duration > 0
-            ? await ExtractSpreadFramesAsync(path, duration, frameCount, options, ct)
-            : await ExtractFallbackFramesAsync(path, frameCount, options, ct);
+        // Unknown duration: fall back to a single low-fps pass across the file.
+        if (duration <= 0)
+        {
+            var payload = await ExtractFallbackFramesAsync(path, frameCount, options, ct);
+            return new VideoSignature(HashPngStream(payload, frameCount, ct));
+        }
 
-        if (payload is null || payload.Length == 0)
-            return new VideoSignature(Array.Empty<ulong>());
-
-        var hashes = new List<ulong>(frameCount);
-        foreach (var png in SplitPngFrames(payload))
+        var positions = BuildSamplePositions(duration, frameCount, options);
+        var hashes = new List<ulong>(positions.Count);
+        foreach (var seconds in positions)
         {
             ct.ThrowIfCancellationRequested();
+            var png = await ExtractFrameAsync(path, seconds, options.GentleResourceUsage, ct);
+            if (png is null) continue;
             using var ms = new MemoryStream(png);
             var hash = await PerceptualHasher.ComputeAsync(ms, ct);
             if (hash is not null) hashes.Add(hash.Value);
@@ -72,24 +80,40 @@ public sealed class FfmpegVideoHasher
     }
 
     /// <summary>
-    /// One ffmpeg pass across [intro%, 100-outro%] of the runtime, emitting
-    /// exactly <paramref name="frameCount"/> evenly-spaced, downscaled PNGs.
+    /// Divides [intro%, 100-outro%] into <paramref name="frameCount"/> equal
+    /// segments and picks one random timestamp inside each. With a fixed seed
+    /// (shared across the scan) two copies of the same film get identical
+    /// positions and therefore still match, while a different run probes
+    /// different spots.
     /// </summary>
-    private async Task<byte[]?> ExtractSpreadFramesAsync(string path, double duration, int frameCount, ScanOptions options, CancellationToken ct)
+    private static List<double> BuildSamplePositions(double duration, int frameCount, ScanOptions options)
     {
         var intro = Math.Clamp(options.VideoIntroSkipPercent, 0, 40) / 100.0;
         var outro = Math.Clamp(options.VideoOutroSkipPercent, 0, 40) / 100.0;
 
         var start = duration * intro;
         var window = Math.Max(duration * (1 - intro - outro), 0.5);
-        var fps = frameCount / window; // frames per second that yields ~frameCount frames
+        var segment = window / frameCount;
 
-        var threads = options.GentleResourceUsage ? "-threads 1 " : string.Empty;
+        var rng = options.VideoSampleSeed != 0 ? new Random(options.VideoSampleSeed) : null;
+        var positions = new List<double>(frameCount);
+        for (var i = 0; i < frameCount; i++)
+        {
+            // Random point within the segment, or its midpoint when seed = 0.
+            var offset = rng is not null ? rng.NextDouble() : 0.5;
+            positions.Add(start + segment * (i + offset));
+        }
+        return positions;
+    }
+
+    /// <summary>Extracts a single downscaled PNG frame at the given timestamp.</summary>
+    private async Task<byte[]?> ExtractFrameAsync(string path, double seconds, bool gentle, CancellationToken ct)
+    {
+        var threads = gentle ? "-threads 1 " : string.Empty;
         var args = string.Create(CultureInfo.InvariantCulture,
-            $"-hide_banner -loglevel error -ss {start:0.###} {threads}-i \"{path}\" -t {window:0.###} -an " +
-            $"-vf fps={fps:0.######},scale=160:-2 -frames:v {frameCount} -f image2pipe -vcodec png pipe:1");
-
-        return await RunToBytesAsync(_ffmpeg, args, options.GentleResourceUsage, ct);
+            $"-hide_banner -loglevel error -ss {seconds:0.###} {threads}-i \"{path}\" -an " +
+            $"-frames:v 1 -vf scale=160:-2 -f image2pipe -vcodec png pipe:1");
+        return await RunToBytesAsync(_ffmpeg, args, gentle, ct);
     }
 
     /// <summary>Duration unknown: grab a bounded number of frames at a low fps.</summary>
@@ -100,6 +124,20 @@ public sealed class FfmpegVideoHasher
             $"-hide_banner -loglevel error {threads}-i \"{path}\" -an " +
             $"-vf fps=1/10,scale=160:-2 -frames:v {frameCount} -f image2pipe -vcodec png pipe:1");
         return await RunToBytesAsync(_ffmpeg, args, options.GentleResourceUsage, ct);
+    }
+
+    private static List<ulong> HashPngStream(byte[]? payload, int frameCount, CancellationToken ct)
+    {
+        var hashes = new List<ulong>(frameCount);
+        if (payload is null || payload.Length == 0) return hashes;
+        foreach (var png in SplitPngFrames(payload))
+        {
+            ct.ThrowIfCancellationRequested();
+            using var ms = new MemoryStream(png);
+            var hash = PerceptualHasher.ComputeAsync(ms, ct).GetAwaiter().GetResult();
+            if (hash is not null) hashes.Add(hash.Value);
+        }
+        return hashes;
     }
 
     private async Task<byte[]?> RunToBytesAsync(string fileName, string arguments, bool gentle, CancellationToken ct)

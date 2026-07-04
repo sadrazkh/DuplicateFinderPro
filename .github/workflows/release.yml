@@ -46,12 +46,15 @@ jobs:
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none -p:DebugSymbols=false
           -p:Version=${{ steps.ver.outputs.version }}
           -o publish/portable
 
       - name: Zip portable
         shell: pwsh
-        run: Compress-Archive -Path publish/portable/* -DestinationPath "DuplicateFinderPro-${{ steps.ver.outputs.version }}-portable-win-x64.zip" -Force
+        run: |
+          Compress-Archive -Path publish/portable/* -DestinationPath "DuplicateFinderPro-${{ steps.ver.outputs.version }}-portable-win-x64.zip" -Force
+          Get-ChildItem publish/portable
 
       # ---------- Installer (Inno Setup over a self-contained folder) ----------
       - name: Publish app for installer
@@ -59,6 +62,7 @@ jobs:
           dotnet publish src/DuplicateFinderPro.App/DuplicateFinderPro.App.csproj
           -c Release -r win-x64 --self-contained true
           -p:PublishSingleFile=false
+          -p:DebugType=none -p:DebugSymbols=false
           -p:Version=${{ steps.ver.outputs.version }}
           -o publish/app
 
@@ -68,7 +72,12 @@ jobs:
       - name: Build installer
         shell: pwsh
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" /DMyAppVersion=${{ steps.ver.outputs.version }} installer\DuplicateFinderPro.iss
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) { $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" }
+          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found at $iscc" }
+          Write-Host "Using $iscc"
+          & $iscc /DMyAppVersion=${{ steps.ver.outputs.version }} installer\DuplicateFinderPro.iss
+          Get-ChildItem installer\Output
 
       # ---------- Publish artifacts / release ----------
       - name: Upload build artifacts
