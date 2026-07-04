@@ -20,17 +20,73 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <!-- Card style for grouping panels -->
+        <!-- ===================== Design system ===================== -->
+        <LinearGradientBrush x:Key="HeaderGradient" StartPoint="0,0" EndPoint="1,0.4">
+            <GradientStop Color="#00897B" Offset="0" />   <!-- teal 600 -->
+            <GradientStop Color="#2E7D32" Offset="1" />   <!-- green 800 -->
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ScanGradient" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="#00897B" Offset="0" />
+            <GradientStop Color="#43A047" Offset="1" />
+        </LinearGradientBrush>
+        <SolidColorBrush x:Key="DangerBrush" Color="#E53935" />
+        <SolidColorBrush x:Key="WarnBrush" Color="#F59E0B" />
+
+        <!-- Section card -->
         <Style x:Key="Section" TargetType="materialDesign:Card">
-            <Setter Property="Padding" Value="16" />
-            <Setter Property="Margin" Value="8" />
-            <Setter Property="UniformCornerRadius" Value="10" />
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="Margin" Value="8,7,8,7" />
+            <Setter Property="UniformCornerRadius" Value="14" />
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp2" />
+        </Style>
+
+        <!-- Section title with a colored accent bar -->
+        <Style x:Key="SectionHeader" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal" />
+            <Setter Property="Margin" Value="0,0,0,12" />
         </Style>
         <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="AccentBar" TargetType="Border">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="Height" Value="18" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Background" Value="{DynamicResource PrimaryHueMidBrush}" />
+        </Style>
+
+        <!-- Stat card in the results summary -->
+        <Style x:Key="StatCard" TargetType="Border">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="14,11" />
+            <Setter Property="Margin" Value="5" />
+            <Setter Property="MinWidth" Value="150" />
+            <Setter Property="Background" Value="{DynamicResource MaterialDesignChipBackground}" />
+        </Style>
+        <Style x:Key="StatLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0.7" />
+            <Setter Property="Margin" Value="0,0,0,2" />
+        </Style>
+        <Style x:Key="StatValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <!-- Prominent primary button (gradient) -->
+        <Style x:Key="PrimaryAction" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Background" Value="{StaticResource ScanGradient}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="Foreground" Value="White" />
             <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Margin" Value="0,0,0,10" />
-            <Setter Property="Opacity" Value="0.9" />
+            <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10" />
+            <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp3" />
         </Style>
     </Window.Resources>
 
@@ -42,8 +98,8 @@
             </Grid.RowDefinitions>
 
             <!-- ===== Top app bar ===== -->
-            <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryDark" Padding="16,10"
-                                      materialDesign:ElevationAssist.Elevation="Dp4">
+            <Border Grid.Row="0" Background="{StaticResource HeaderGradient}"
+                    materialDesign:ElevationAssist.Elevation="Dp4" Padding="20,12" TextElement.Foreground="White">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -52,24 +108,31 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                        <materialDesign:PackIcon Kind="FileFind" Width="34" Height="34" VerticalAlignment="Center" />
-                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                            <TextBlock Text="{loc:Loc App.Title}" FontSize="18" FontWeight="Bold" />
-                            <TextBlock Text="{loc:Loc App.Subtitle}" FontSize="12" Opacity="0.8" />
+                        <Border Width="46" Height="46" CornerRadius="12" Background="#33FFFFFF" VerticalAlignment="Center">
+                            <materialDesign:PackIcon Kind="FileFind" Width="26" Height="26"
+                                                     HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" />
+                        </Border>
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{loc:Loc App.Title}" FontSize="19" FontWeight="Bold" Foreground="White" />
+                            <TextBlock Text="{loc:Loc App.Subtitle}" FontSize="12" Opacity="0.85" Foreground="White" />
                         </StackPanel>
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="White"
-                                Command="{Binding SetLanguageCommand}"
-                                CommandParameter="{x:Static loc:AppLanguage.Persian}"
-                                Content="{loc:Loc Lang.Persian}" />
-                        <Button Style="{StaticResource MaterialDesignFlatButton}"
-                                Foreground="White"
-                                Command="{Binding SetLanguageCommand}"
-                                CommandParameter="{x:Static loc:AppLanguage.English}"
-                                Content="{loc:Loc Lang.English}" />
+                        <Border CornerRadius="20" Background="#26FFFFFF" Padding="3" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="30" Padding="14,0"
+                                        materialDesign:ButtonAssist.CornerRadius="16"
+                                        Command="{Binding SetLanguageCommand}"
+                                        CommandParameter="{x:Static loc:AppLanguage.English}"
+                                        Content="{loc:Loc Lang.English}" />
+                                <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Height="30" Padding="14,0"
+                                        materialDesign:ButtonAssist.CornerRadius="16"
+                                        Command="{Binding SetLanguageCommand}"
+                                        CommandParameter="{x:Static loc:AppLanguage.Persian}"
+                                        Content="{loc:Loc Lang.Persian}" />
+                            </StackPanel>
+                        </Border>
                         <Button Style="{StaticResource MaterialDesignIconButton}"
                                 Foreground="White"
                                 ToolTip="{loc:Loc Menu.Theme}"
@@ -78,7 +141,7 @@
                         </Button>
                     </StackPanel>
                 </Grid>
-            </materialDesign:ColorZone>
+            </Border>
 
             <!-- ===== Body ===== -->
             <Grid Grid.Row="1">
@@ -94,7 +157,12 @@
                         <!-- Folders -->
                         <materialDesign:Card Style="{StaticResource Section}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Folders}" />
+                                <StackPanel Style="{StaticResource SectionHeader}">
+                                    <Border Style="{StaticResource AccentBar}" />
+                                    <materialDesign:PackIcon Kind="FolderMultipleOutline" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Folders}" />
+                                </StackPanel>
                                 <Border BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="1"
                                         CornerRadius="6" MinHeight="90" AllowDrop="True"
                                         Drop="OnFoldersDrop" DragOver="OnFoldersDragOver">
@@ -142,29 +210,50 @@
                         <!-- Detection methods -->
                         <materialDesign:Card Style="{StaticResource Section}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Methods}" />
-                                <CheckBox IsChecked="{Binding UseExactContent}" Margin="0,4">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Method.ExactContent}" FontWeight="Medium" />
-                                        <TextBlock Text="{loc:Loc Method.ExactContent.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                <StackPanel Style="{StaticResource SectionHeader}">
+                                    <Border Style="{StaticResource AccentBar}" />
+                                    <materialDesign:PackIcon Kind="MagnifyScan" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Methods}" />
+                                </StackPanel>
+                                <CheckBox IsChecked="{Binding UseExactContent}" Margin="0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Fingerprint" Width="22" Height="22" Margin="2,1,10,0" VerticalAlignment="Top"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Method.ExactContent}" FontWeight="Medium" />
+                                            <TextBlock Text="{loc:Loc Method.ExactContent.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </CheckBox>
-                                <CheckBox IsChecked="{Binding UseNameSimilarity}" Margin="0,4">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Method.NameSimilarity}" FontWeight="Medium" />
-                                        <TextBlock Text="{loc:Loc Method.NameSimilarity.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                <CheckBox IsChecked="{Binding UseNameSimilarity}" Margin="0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FormTextbox" Width="22" Height="22" Margin="2,1,10,0" VerticalAlignment="Top"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Method.NameSimilarity}" FontWeight="Medium" />
+                                            <TextBlock Text="{loc:Loc Method.NameSimilarity.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </CheckBox>
-                                <CheckBox IsChecked="{Binding UsePerceptualImage}" Margin="0,4">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Method.PerceptualImage}" FontWeight="Medium" />
-                                        <TextBlock Text="{loc:Loc Method.PerceptualImage.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                <CheckBox IsChecked="{Binding UsePerceptualImage}" Margin="0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ImageMultipleOutline" Width="22" Height="22" Margin="2,1,10,0" VerticalAlignment="Top"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Method.PerceptualImage}" FontWeight="Medium" />
+                                            <TextBlock Text="{loc:Loc Method.PerceptualImage.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </CheckBox>
-                                <CheckBox IsChecked="{Binding UsePerceptualVideo}" Margin="0,4">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Method.PerceptualVideo}" FontWeight="Medium" />
-                                        <TextBlock Text="{loc:Loc Method.PerceptualVideo.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                <CheckBox IsChecked="{Binding UsePerceptualVideo}" Margin="0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="MovieOpenOutline" Width="22" Height="22" Margin="2,1,10,0" VerticalAlignment="Top"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Method.PerceptualVideo}" FontWeight="Medium" />
+                                            <TextBlock Text="{loc:Loc Method.PerceptualVideo.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
                                     </StackPanel>
                                 </CheckBox>
                             </StackPanel>
@@ -173,7 +262,12 @@
                         <!-- Filters -->
                         <materialDesign:Card Style="{StaticResource Section}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Filters}" />
+                                <StackPanel Style="{StaticResource SectionHeader}">
+                                    <Border Style="{StaticResource AccentBar}" />
+                                    <materialDesign:PackIcon Kind="FilterVariant" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Filters}" />
+                                </StackPanel>
                                 <CheckBox Content="{loc:Loc Config.Recursive}" IsChecked="{Binding Recursive}" Margin="0,2" />
                                 <CheckBox Content="{loc:Loc Config.IncludeHidden}" IsChecked="{Binding IncludeHidden}" Margin="0,2" />
                                 <TextBox Margin="0,10,0,0"
@@ -198,7 +292,12 @@
                         <!-- Advanced -->
                         <materialDesign:Card Style="{StaticResource Section}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Advanced}" />
+                                <StackPanel Style="{StaticResource SectionHeader}">
+                                    <Border Style="{StaticResource AccentBar}" />
+                                    <materialDesign:PackIcon Kind="Tune" VerticalAlignment="Center" Margin="0,0,8,0"
+                                                             Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Advanced}" />
+                                </StackPanel>
 
                                 <!-- Name matching -->
                                 <StackPanel Margin="0,4,0,0">
@@ -372,11 +471,11 @@
                         <!-- Scan actions -->
                         <materialDesign:Card Style="{StaticResource Section}">
                             <StackPanel>
-                                <Button Height="46" Style="{StaticResource MaterialDesignRaisedButton}"
+                                <Button Style="{StaticResource PrimaryAction}"
                                         Command="{Binding ScanCommand}"
                                         Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
                                     <StackPanel Orientation="Horizontal">
-                                        <materialDesign:PackIcon Kind="Magnify" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <materialDesign:PackIcon Kind="Magnify" Width="22" Height="22" Margin="0,0,8,0" VerticalAlignment="Center" />
                                         <TextBlock Text="{loc:Loc Action.Scan}" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
@@ -414,30 +513,61 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
 
-                    <!-- Summary chips -->
+                    <!-- Summary stat cards -->
                     <materialDesign:Card Grid.Row="0" Style="{StaticResource Section}">
                         <WrapPanel>
-                            <StackPanel Margin="6,2" MinWidth="120">
-                                <TextBlock Text="{loc:Loc Results.FilesScanned}" FontSize="11" Opacity="0.7" />
-                                <TextBlock Text="{Binding FilesScanned}" FontSize="20" FontWeight="Bold" />
-                            </StackPanel>
-                            <StackPanel Margin="16,2,6,2" MinWidth="120">
-                                <TextBlock Text="{loc:Loc Results.Groups}" FontSize="11" Opacity="0.7" />
-                                <TextBlock Text="{Binding GroupCount}" FontSize="20" FontWeight="Bold" />
-                            </StackPanel>
-                            <StackPanel Margin="16,2,6,2" MinWidth="120">
-                                <TextBlock Text="{loc:Loc Results.RedundantFiles}" FontSize="11" Opacity="0.7" />
-                                <TextBlock Text="{Binding RedundantCount}" FontSize="20" FontWeight="Bold" />
-                            </StackPanel>
-                            <StackPanel Margin="16,2,6,2" MinWidth="140">
-                                <TextBlock Text="{loc:Loc Results.Reclaimable}" FontSize="11" Opacity="0.7" />
-                                <TextBlock Text="{Binding ReclaimableDisplay}" FontSize="20" FontWeight="Bold"
-                                           Foreground="{DynamicResource SecondaryHueMidBrush}" />
-                            </StackPanel>
-                            <StackPanel Margin="16,2,6,2" MinWidth="90">
-                                <TextBlock Text="{loc:Loc Results.Elapsed}" FontSize="11" Opacity="0.7" />
-                                <TextBlock Text="{Binding ElapsedDisplay}" FontSize="20" FontWeight="Bold" />
-                            </StackPanel>
+                            <Border Style="{StaticResource StatCard}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FileSearchOutline" Width="26" Height="26" VerticalAlignment="Center"
+                                                             Margin="0,0,10,0" Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.FilesScanned}" />
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding FilesScanned}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="FolderMultipleOutline" Width="26" Height="26" VerticalAlignment="Center"
+                                                             Margin="0,0,10,0" Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.Groups}" />
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding GroupCount}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ContentDuplicate" Width="26" Height="26" VerticalAlignment="Center"
+                                                             Margin="0,0,10,0" Foreground="{StaticResource WarnBrush}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.RedundantFiles}" />
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding RedundantCount}"
+                                                   Foreground="{StaticResource WarnBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="DeleteSweepOutline" Width="26" Height="26" VerticalAlignment="Center"
+                                                             Margin="0,0,10,0" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.Reclaimable}" />
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding ReclaimableDisplay}"
+                                                   Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" MinWidth="120">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="TimerOutline" Width="26" Height="26" VerticalAlignment="Center"
+                                                             Margin="0,0,10,0" Opacity="0.7" />
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.Elapsed}" />
+                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding ElapsedDisplay}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
                         </WrapPanel>
                     </materialDesign:Card>
 
@@ -565,8 +695,10 @@
                                                           HeadersVisibility="Column"
                                                           IsReadOnly="False"
                                                           SelectionMode="Extended"
-                                                          materialDesign:DataGridAssist.CellPadding="8,4"
-                                                          Margin="8,0,8,8">
+                                                          GridLinesVisibility="None"
+                                                          materialDesign:DataGridAssist.CellPadding="10,6"
+                                                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8"
+                                                          Margin="8,0,8,10">
                                                     <DataGrid.Columns>
                                                         <DataGridCheckBoxColumn Header="{loc:Loc Grid.Keep}"
                                                                                 Binding="{Binding IsMarkedForRemoval, UpdateSourceTrigger=PropertyChanged}"
@@ -624,7 +756,7 @@
                                                         <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsMarkedForRemoval}" Value="True">
-                                                                    <Setter Property="Background" Value="#22F44336" />
+                                                                    <Setter Property="Background" Value="#1FE53935" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -676,6 +808,7 @@
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0"
+                                        materialDesign:ButtonAssist.CornerRadius="8"
                                         Command="{Binding MoveCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <materialDesign:PackIcon Kind="FolderMoveOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -683,6 +816,7 @@
                                     </StackPanel>
                                 </Button>
                                 <Button Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,8,0"
+                                        materialDesign:ButtonAssist.CornerRadius="8"
                                         Command="{Binding RecycleCommand}">
                                     <StackPanel Orientation="Horizontal">
                                         <materialDesign:PackIcon Kind="DeleteOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
@@ -690,7 +824,8 @@
                                     </StackPanel>
                                 </Button>
                                 <Button Command="{Binding DeleteCommand}"
-                                        Background="#F44336" BorderBrush="#F44336"
+                                        Background="{StaticResource DangerBrush}" BorderBrush="{StaticResource DangerBrush}"
+                                        materialDesign:ButtonAssist.CornerRadius="8"
                                         Style="{StaticResource MaterialDesignRaisedButton}">
                                     <StackPanel Orientation="Horizontal">
                                         <materialDesign:PackIcon Kind="DeleteForeverOutline" Margin="0,0,6,0" VerticalAlignment="Center" />
