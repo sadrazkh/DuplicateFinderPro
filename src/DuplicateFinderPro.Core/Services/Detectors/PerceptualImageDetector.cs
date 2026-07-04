@@ -72,12 +72,20 @@ public sealed class PerceptualImageDetector : IDuplicateDetector
         {
             if (cluster.Count < 2) continue;
             var members = cluster.Select(i => hashed[i]).OrderByDescending(f => f.Length).ToList();
-            var similarity = 1.0 - (double)threshold / 64.0;
+
+            // Real similarity: average Hamming closeness to the representative hash.
+            var rep = members[0].PerceptualHash!.Value;
+            var avgDistance = members.Skip(1)
+                .Select(m => (double)PerceptualHasher.HammingDistance(rep, m.PerceptualHash!.Value))
+                .DefaultIfEmpty(0)
+                .Average();
+            var similarity = 1.0 - avgDistance / 64.0;
+
             groups.Add(new DuplicateGroup(
                 method,
                 members,
                 members[0].PerceptualHash!.Value.ToString("x16"),
-                similarity));
+                Math.Clamp(similarity, 0, 1)));
         }
         return groups;
     }

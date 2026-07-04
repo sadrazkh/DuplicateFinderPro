@@ -67,11 +67,19 @@ public sealed class NameSimilarityDetector : IDuplicateDetector
         {
             if (cluster.Count < 2) continue;
             var members = cluster.Select(i => candidates[i]).OrderBy(f => f.FileName).ToList();
+
+            // Real similarity: average closeness of each name to the representative.
+            var rep = members[0].NormalizedName ?? string.Empty;
+            var similarity = members.Skip(1)
+                .Select(m => StringSimilarity.Ratio(rep, m.NormalizedName ?? string.Empty))
+                .DefaultIfEmpty(1.0)
+                .Average();
+
             groups.Add(new DuplicateGroup(
                 Method,
                 members,
                 members[0].NormalizedName ?? members[0].FileName,
-                similarity: threshold));
+                similarity: Math.Clamp(similarity, 0, 1)));
         }
 
         return Task.FromResult<IReadOnlyList<DuplicateGroup>>(groups);

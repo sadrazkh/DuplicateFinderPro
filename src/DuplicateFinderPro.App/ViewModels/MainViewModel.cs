@@ -38,6 +38,9 @@ public sealed class MainViewModel : ObservableObject
         MoveCommand = new RelayCommand(_ => MoveSelected(), _ => SelectedCount > 0);
         ExportCsvCommand = new AsyncRelayCommand(ExportCsvAsync, () => HasResults);
         ExportJsonCommand = new AsyncRelayCommand(ExportJsonAsync, () => HasResults);
+        SaveSessionCommand = new AsyncRelayCommand(SaveSessionAsync, () => HasResults);
+        ImportSessionCommand = new AsyncRelayCommand(ImportSessionAsync);
+        ResetFilterCommand = new RelayCommand(_ => ResetFilter());
         OpenLocationCommand = new RelayCommand(p => OpenLocation(p as FileItemViewModel));
         OpenFileCommand = new RelayCommand(p => OpenFile(p as FileItemViewModel));
         CopyPathCommand = new RelayCommand(p => CopyToClipboard((p as FileItemViewModel)?.FullPath));
@@ -61,6 +64,14 @@ public sealed class MainViewModel : ObservableObject
 
         PhotosView = System.Windows.Data.CollectionViewSource.GetDefaultView(PhotoIssues);
         PhotosView.Filter = o => !ShowOnlyFlaggedPhotos || (o is PhotoIssueViewModel p && p.HasIssues);
+
+        GroupsView = System.Windows.Data.CollectionViewSource.GetDefaultView(Groups);
+        GroupsView.Filter = o => o is DuplicateGroupViewModel g && GroupMatchesFilter(g);
+        foreach (var r in FilterReasons)
+            r.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(FilterReasonOption.IsSelected)) RefreshGroupFilter(); };
+
+        // Live-refresh dynamic (per-item) labels when the language changes.
+        Localization.Localization.Instance.PropertyChanged += (_, _) => RefreshLocalizedItems();
 
         _elapsedTimer.Tick += (_, _) =>
         {
@@ -345,11 +356,83 @@ public sealed class MainViewModel : ObservableObject
 
     public int GroupCount => Groups.Count;
 
+    /// <summary>Filtered/queried view of <see cref="Groups"/> bound by the results list.</summary>
+    public System.ComponentModel.ICollectionView GroupsView { get; }
+
+    public int VisibleGroupCount => Groups.Count(GroupMatchesFilter);
+
     private string _filterText = string.Empty;
     public string FilterText
     {
         get => _filterText;
-        set { if (SetProperty(ref _filterText, value)) ApplyFilter(); }
+        set { if (SetProperty(ref _filterText, value)) RefreshGroupFilter(); }
+    }
+
+    // ---- Post-scan query / filter ----------------------------------------
+
+    public IReadOnlyList<FilterReasonOption> FilterReasons { get; } = FilterReasonOption.CreateDefault();
+
+    private bool _filterMatchAll;
+    /// <summary>true = a group must have ALL selected reasons; false = ANY.</summary>
+    public bool FilterMatchAll
+    {
+        get => _filterMatchAll;
+        set { if (SetProperty(ref _filterMatchAll, value)) RefreshGroupFilter(); }
+    }
+
+    private double _filterMinSimilarity;
+    public double FilterMinSimilarity
+    {
+        get => _filterMinSimilarity;
+        set { if (SetProperty(ref _filterMinSimilarity, Math.Clamp(value, 0, 1))) RefreshGroupFilter(); }
+    }
+
+    private int _filterMinCount = 2;
+    public int FilterMinCount
+    {
+        get => _filterMinCount;
+        set { if (SetProperty(ref _filterMinCount, Math.Max(2, value))) RefreshGroupFilter(); }
+    }
+
+    public void ResetFilter()
+    {
+        _filterText = string.Empty; OnPropertyChanged(nameof(FilterText));
+        _filterMatchAll = false; OnPropertyChanged(nameof(FilterMatchAll));
+        _filterMinSimilarity = 0; OnPropertyChanged(nameof(FilterMinSimilarity));
+        _filterMinCount = 2; OnPropertyChanged(nameof(FilterMinCount));
+        foreach (var r in FilterReasons) r.IsSelected = false;
+        RefreshGroupFilter();
+    }
+
+    private void RefreshGroupFilter()
+    {
+        GroupsView.Refresh();
+        OnPropertyChanged(nameof(VisibleGroupCount));
+    }
+
+    private bool GroupMatchesFilter(DuplicateGroupViewModel g)
+    {
+        if (g.Count < FilterMinCount) return false;
+
+        if (!string.IsNullOrWhiteSpace(_filterText))
+        {
+            var t = _filterText;
+            var hit = g.Model.Files.Any(f =>
+                f.FileName.Contains(t, StringComparison.OrdinalIgnoreCase) ||
+                f.DirectoryName.Contains(t, StringComparison.OrdinalIgnoreCase));
+            if (!hit) return false;
+        }
+
+        var selected = FilterReasons.Where(r => r.IsSelected).Select(r => r.Method).ToList();
+        if (selected.Count > 0)
+        {
+            bool Ok(Core.Models.DetectionMethod m) =>
+                g.Model.HasMethod(m) && g.Model.SimilarityFor(m) >= FilterMinSimilarity;
+            return FilterMatchAll ? selected.All(Ok) : selected.Any(Ok);
+        }
+
+        // No reason chosen: apply the similarity floor to the group's best match.
+        return g.Similarity >= FilterMinSimilarity;
     }
 
     // ---- Commands ---------------------------------------------------------
@@ -367,6 +450,9 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand MoveCommand { get; }
     public AsyncRelayCommand ExportCsvCommand { get; }
     public AsyncRelayCommand ExportJsonCommand { get; }
+    public AsyncRelayCommand SaveSessionCommand { get; }
+    public AsyncRelayCommand ImportSessionCommand { get; }
+    public RelayCommand ResetFilterCommand { get; }
     public RelayCommand OpenLocationCommand { get; }
     public RelayCommand OpenFileCommand { get; }
     public RelayCommand CopyPathCommand { get; }
@@ -717,6 +803,7 @@ public sealed class MainViewModel : ObservableObject
 
         RefreshSelection();
         SelectedPhotoCount = 0;
+        RefreshGroupFilter();
         OnResultsChanged();
         OnPropertyChanged(nameof(HasPhotos));
         OnPropertyChanged(nameof(FlaggedPhotoCount));
@@ -1010,9 +1097,14 @@ public sealed class MainViewModel : ObservableObject
         RefreshSelection();
     }
 
-    private void ApplyFilter()
+    private void RefreshLocalizedItems()
     {
-        foreach (var group in Groups) group.ApplyFilter(_filterText);
+        foreach (var g in Groups) g.RefreshLocalized();
+        foreach (var p in PhotoIssues) p.RefreshLocalized();
+        foreach (var k in KeepRuleOption.All) k.RefreshLocalized();
+        foreach (var r in ResourceOption.All) r.RefreshLocalized();
+        foreach (var c in FileCategories) c.RefreshLocalized();
+        foreach (var f in FilterReasons) f.RefreshLocalized();
     }
 
     private void SetExpanded(bool expanded)
@@ -1170,6 +1262,59 @@ public sealed class MainViewModel : ObservableObject
         Warnings = Warnings.ToList(),
     };
 
+    // ---- Session save / import -------------------------------------------
+
+    private async Task SaveSessionAsync()
+    {
+        var path = _dialogs.SaveFile("Duplicate Finder session (*.dfp.json)|*.dfp.json", ".dfp.json", "duplicates.dfp");
+        if (path is null) return;
+        await SessionSerializer.SaveAsync(Groups.Select(g => g.Model).ToList(), path);
+        _dialogs.Info(L("Msg.ExportDone"), L("App.Title"));
+    }
+
+    private async Task ImportSessionAsync()
+    {
+        var path = _dialogs.OpenFile("Duplicate Finder session (*.dfp.json;*.json)|*.dfp.json;*.json");
+        if (path is null) return;
+        try
+        {
+            var groups = await SessionSerializer.LoadAsync(path);
+            LoadGroups(groups);
+            _dialogs.Info(Localization.Localization.Instance.Format("Msg.ImportDone", groups.Count), L("App.Title"));
+        }
+        catch (Exception ex)
+        {
+            _dialogs.Warn(ex.Message, L("Common.Warning"));
+        }
+    }
+
+    /// <summary>Populates the results from a set of groups (a scan or an import).</summary>
+    private void LoadGroups(IReadOnlyList<DuplicateGroup> groups)
+    {
+        HasScanned = true;
+        foreach (var g in Groups)
+            foreach (var f in g.Files) f.PropertyChanged -= OnFilePropertyChanged;
+        Groups.Clear();
+
+        var i = 0;
+        foreach (var group in groups)
+        {
+            var vm = new DuplicateGroupViewModel(++i, group);
+            foreach (var file in vm.Files) file.PropertyChanged += OnFilePropertyChanged;
+            Groups.Add(vm);
+        }
+
+        FilesScanned = Groups.Sum(g => g.Count);
+        RedundantCount = groups.Sum(g => g.Count - 1);
+        ReclaimableDisplay = ByteSize.Humanize(groups.Sum(g => g.ReclaimableBytes));
+        ElapsedDisplay = "-";
+        GroupsFoundLive = Groups.Count;
+
+        RefreshSelection();
+        RefreshGroupFilter();
+        OnResultsChanged();
+    }
+
     // ---- Language ---------------------------------------------------------
 
     private void SetLanguage(object? param)
@@ -1187,6 +1332,7 @@ public sealed class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasResults));
         OnPropertyChanged(nameof(GroupCount));
+        OnPropertyChanged(nameof(VisibleGroupCount));
     }
 
     private static string L(string key) => Localization.Localization.Instance[key];

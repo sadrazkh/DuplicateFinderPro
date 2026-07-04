@@ -26,6 +26,12 @@ public sealed class DialogService
         return dlg.ShowDialog() == true ? dlg.FolderNames : Array.Empty<string>();
     }
 
+    public string? OpenFile(string filter)
+    {
+        var dlg = new OpenFileDialog { Filter = filter, CheckFileExists = true, Multiselect = false };
+        return dlg.ShowDialog() == true ? dlg.FileName : null;
+    }
+
     public string? SaveFile(string filter, string defaultExt, string? suggestedName = null)
     {
         var dlg = new SaveFileDialog

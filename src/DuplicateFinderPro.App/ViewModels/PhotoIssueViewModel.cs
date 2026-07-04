@@ -37,6 +37,8 @@ public sealed class PhotoIssueViewModel : ObservableObject
         set => SetProperty(ref _isSelected, value);
     }
 
+    public void RefreshLocalized() => OnPropertyChanged(nameof(FlagsText));
+
     public static string FlagLabel(PhotoFlag flag) =>
         Localization.Localization.Instance[$"Photo.{flag}"];
 }

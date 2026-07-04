@@ -27,6 +27,8 @@ public sealed class FileCategoryOption : ObservableObject
 
     public string Display => Localization.Localization.Instance[$"Cat.{Key}"];
 
+    public void RefreshLocalized() => OnPropertyChanged(nameof(Display));
+
     public bool IsSelected
     {
         get => _isSelected;

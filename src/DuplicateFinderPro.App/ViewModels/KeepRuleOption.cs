@@ -1,9 +1,10 @@
+using DuplicateFinderPro.App.Mvvm;
 using DuplicateFinderPro.Core.Services;
 
 namespace DuplicateFinderPro.App.ViewModels;
 
 /// <summary>Combo-box item pairing a <see cref="KeepRule"/> with its display key.</summary>
-public sealed class KeepRuleOption
+public sealed class KeepRuleOption : ObservableObject
 {
     public KeepRuleOption(KeepRule rule, string displayKey)
     {
@@ -15,6 +16,8 @@ public sealed class KeepRuleOption
     public string DisplayKey { get; }
 
     public string Display => Localization.Localization.Instance[DisplayKey];
+
+    public void RefreshLocalized() => OnPropertyChanged(nameof(Display));
 
     public static IReadOnlyList<KeepRuleOption> All { get; } = new[]
     {

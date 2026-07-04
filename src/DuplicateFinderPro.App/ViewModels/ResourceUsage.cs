@@ -12,7 +12,7 @@ public enum ResourceUsageLevel
 }
 
 /// <summary>Combo-box item pairing a level with its localized label + description.</summary>
-public sealed class ResourceOption
+public sealed class ResourceOption : Mvvm.ObservableObject
 {
     public ResourceOption(ResourceUsageLevel level, string labelKey, string descKey)
     {
@@ -27,6 +27,12 @@ public sealed class ResourceOption
 
     public string Label => Localization.Localization.Instance[LabelKey];
     public string Description => Localization.Localization.Instance[DescKey];
+
+    public void RefreshLocalized()
+    {
+        OnPropertyChanged(nameof(Label));
+        OnPropertyChanged(nameof(Description));
+    }
 
     public static IReadOnlyList<ResourceOption> All { get; } = new[]
     {

@@ -147,6 +147,39 @@ public sealed class DetectionTests : IDisposable
     }
 
     [Fact]
+    public async Task Groups_matched_by_multiple_methods_merge_with_all_reasons()
+    {
+        // Same bytes AND similar names → found by both detectors → one merged group.
+        Write("a/Movie.mkv", "IDENTICAL MOVIE BYTES");
+        Write("b/Movie (1).mkv", "IDENTICAL MOVIE BYTES");
+
+        var result = await ScanAsync(DetectionMethod.ExactContent | DetectionMethod.NameSimilarity,
+            o => o.NameSimilarityThreshold = 0.8);
+
+        var group = Assert.Single(result.Groups);
+        Assert.True(group.HasMethod(DetectionMethod.ExactContent));
+        Assert.True(group.HasMethod(DetectionMethod.NameSimilarity));
+        Assert.Equal(2, group.Reasons.Count);
+        Assert.Equal(1.0, group.SimilarityFor(DetectionMethod.ExactContent));
+    }
+
+    [Fact]
+    public async Task Session_roundtrips_groups_and_reasons()
+    {
+        Write("a/x.bin", "SAME");
+        Write("b/y.bin", "SAME");
+        var result = await ScanAsync(DetectionMethod.ExactContent);
+
+        var file = Path.Combine(_root, "session.dfp.json");
+        await SessionSerializer.SaveAsync(result.Groups, file);
+        var loaded = await SessionSerializer.LoadAsync(file);
+
+        Assert.Equal(result.Groups.Count, loaded.Count);
+        Assert.Equal(2, loaded[0].Count);
+        Assert.True(loaded[0].HasMethod(DetectionMethod.ExactContent));
+    }
+
+    [Fact]
     public void Normalize_collapses_copy_variants()
     {
         Assert.Equal(

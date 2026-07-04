@@ -103,6 +103,7 @@ internal static class Strings
         ["Ffmpeg.Downloading"] = "در حال دانلود ffmpeg…",
         ["Ffmpeg.Done"] = "‏ffmpeg با موفقیت نصب شد ✓",
         ["Ffmpeg.Failed"] = "دانلود ffmpeg ناموفق بود",
+        ["Ffmpeg.Redownload"] = "دانلود مجدد",
 
         ["Status.AnalyzingPhotos"] = "در حال تحلیل کیفیت عکس‌ها…",
 
@@ -170,6 +171,19 @@ internal static class Strings
         ["Action.ExpandAll"] = "باز کردن همه",
         ["Action.CollapseAll"] = "بستن همه",
         ["Action.Search"] = "جست‌وجو در نتایج…",
+        ["Action.Import"] = "وارد کردن نتایج",
+        ["Action.SaveSession"] = "ذخیره نتایج",
+
+        ["Filter.Title"] = "فیلتر و دسته‌بندی",
+        ["Filter.Reasons"] = "بر اساس دلیل تطابق",
+        ["Filter.MatchAll"] = "همه‌ی موارد انتخاب‌شده باشند",
+        ["Filter.MinSimilarity"] = "حداقل شباهت",
+        ["Filter.MinCount"] = "حداقل تعداد فایل در گروه",
+        ["Filter.Reset"] = "پاک کردن فیلتر",
+        ["Filter.Showing"] = "نمایش",
+        ["Group.Reasons"] = "دلایل تطابق",
+
+        ["Msg.ImportDone"] = "‏{0} گروه وارد شد.",
 
         ["Ctx.Open"] = "باز کردن فایل",
         ["Ctx.OpenLocation"] = "باز کردن محل فایل",
@@ -329,6 +343,7 @@ internal static class Strings
         ["Ffmpeg.Downloading"] = "Downloading ffmpeg…",
         ["Ffmpeg.Done"] = "ffmpeg installed successfully ✓",
         ["Ffmpeg.Failed"] = "ffmpeg download failed",
+        ["Ffmpeg.Redownload"] = "Re-download",
 
         ["Status.AnalyzingPhotos"] = "Analyzing photo quality…",
 
@@ -396,6 +411,19 @@ internal static class Strings
         ["Action.ExpandAll"] = "Expand all",
         ["Action.CollapseAll"] = "Collapse all",
         ["Action.Search"] = "Search results…",
+        ["Action.Import"] = "Import results",
+        ["Action.SaveSession"] = "Save results",
+
+        ["Filter.Title"] = "Filter & query",
+        ["Filter.Reasons"] = "By match reason",
+        ["Filter.MatchAll"] = "Must match all selected",
+        ["Filter.MinSimilarity"] = "Min similarity",
+        ["Filter.MinCount"] = "Min files per group",
+        ["Filter.Reset"] = "Clear filter",
+        ["Filter.Showing"] = "Showing",
+        ["Group.Reasons"] = "Match reasons",
+
+        ["Msg.ImportDone"] = "{0} groups imported.",
 
         ["Ctx.Open"] = "Open file",
         ["Ctx.OpenLocation"] = "Open file location",

@@ -67,7 +67,7 @@ public sealed class DuplicateScanEngine
 
         var result = new ScanResult
         {
-            Groups = allGroups
+            Groups = DuplicateGroup.MergeByFileSet(allGroups)
                 .OrderByDescending(g => g.ReclaimableBytes)
                 .ThenByDescending(g => g.Count)
                 .ToList(),
