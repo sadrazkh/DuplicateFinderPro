@@ -2,7 +2,9 @@ name: Release
 
 on:
   push:
-    tags: [ 'v*' ]        # e.g. v1.0.0
+    tags:
+      - 'v*'          # e.g. v1.0.0
+      - '[0-9]*'      # e.g. 1.0.0  (tags that start with a digit)
   workflow_dispatch:
     inputs:
       version:
