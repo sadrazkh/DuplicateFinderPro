@@ -11,9 +11,12 @@ namespace DuplicateFinderPro.App.Services;
 /// </summary>
 public sealed class FfmpegInstaller
 {
-    // BtbN publishes a stable "latest" redirect that always points at a current build.
-    private const string DownloadUrl =
-        "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip";
+    // Tried in order. BtbN's "latest" redirect is primary; gyan.dev is a fallback.
+    private static readonly string[] DownloadUrls =
+    {
+        "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip",
+        "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
+    };
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -41,7 +44,23 @@ public sealed class FfmpegInstaller
 
         try
         {
-            await DownloadAsync(tempZip, progress, ct);
+            Exception? last = null;
+            var downloaded = false;
+            foreach (var url in DownloadUrls)
+            {
+                try
+                {
+                    await DownloadAsync(url, tempZip, progress, ct);
+                    downloaded = true;
+                    break;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex) { last = ex; }
+            }
+
+            if (!downloaded)
+                throw new InvalidOperationException("Could not download ffmpeg from any mirror.", last);
+
             ExtractBinaries(tempZip);
             progress.Report(100);
 
@@ -56,12 +75,14 @@ public sealed class FfmpegInstaller
         }
     }
 
-    private static async Task DownloadAsync(string destination, IProgress<double> progress, CancellationToken ct)
+    private static async Task DownloadAsync(string url, string destination, IProgress<double> progress, CancellationToken ct)
     {
-        using var response = await Http.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        using var response = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
 
         var total = response.Content.Headers.ContentLength ?? -1L;
+        if (total <= 0) progress.Report(-1); // signal "indeterminate" to the UI
+
         await using var source = await response.Content.ReadAsStreamAsync(ct);
         await using var target = File.Create(destination);
 

@@ -73,6 +73,34 @@ public sealed class DetectionTests : IDisposable
     }
 
     [Fact]
+    public async Task IncludeExtensions_restricts_scan_to_selected_types()
+    {
+        // Identical pairs of two different kinds; only images should be considered.
+        Write("a/photo.jpg", "IMAGE BYTES");
+        Write("b/copy.jpg", "IMAGE BYTES");
+        Write("a/tool.exe", "BINARY BYTES");
+        Write("b/tool2.exe", "BINARY BYTES");
+
+        var result = await ScanAsync(DetectionMethod.ExactContent,
+            o => o.IncludeExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg" });
+
+        var group = Assert.Single(result.Groups);
+        Assert.All(group.Files, f => Assert.Equal(".jpg", f.Extension));
+    }
+
+    [Fact]
+    public async Task ExcludedFolders_are_skipped()
+    {
+        Write("keep/a.bin", "SAME");
+        Write("skip/b.bin", "SAME");
+
+        var result = await ScanAsync(DetectionMethod.ExactContent,
+            o => o.ExcludedFolders.Add(Path.Combine(_root, "skip")));
+
+        Assert.Empty(result.Groups); // the only twin lived in the excluded folder
+    }
+
+    [Fact]
     public async Task ExactContent_ignores_same_size_but_different_content()
     {
         Write("a.bin", "AAAAAAAAAA"); // 10 chars
@@ -95,6 +123,27 @@ public sealed class DetectionTests : IDisposable
 
         var group = Assert.Single(result.Groups);
         Assert.Equal(3, group.Count);
+    }
+
+    private sealed class SyncProgress<T> : IProgress<T>
+    {
+        public readonly List<T> Items = new();
+        public void Report(T value) { lock (Items) Items.Add(value); }
+    }
+
+    [Fact]
+    public async Task Scan_reports_quick_then_full_hashing_as_distinct_phases()
+    {
+        Write("a/x.bin", "SAME CONTENT, LONG ENOUGH TO HASH");
+        Write("b/y.bin", "SAME CONTENT, LONG ENOUGH TO HASH");
+
+        var progress = new SyncProgress<ScanProgress>();
+        var options = new ScanOptions { RootFolders = { _root }, Methods = DetectionMethod.ExactContent };
+        await new DuplicateScanEngine().ScanAsync(options, progress, CancellationToken.None);
+
+        var phases = progress.Items.Select(p => p.Phase).ToHashSet();
+        Assert.Contains(ScanPhase.QuickHashing, phases);   // fast pre-filter
+        Assert.Contains(ScanPhase.HashingContent, phases); // full confirm — two passes, still O(n)
     }
 
     [Fact]

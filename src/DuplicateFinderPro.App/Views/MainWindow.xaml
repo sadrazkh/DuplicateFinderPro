@@ -90,6 +90,35 @@
             <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp3" />
         </Style>
 
+        <!-- Selectable file-type chip -->
+        <Style x:Key="CategoryChip" TargetType="ToggleButton">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBody}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="bd" CornerRadius="16" BorderThickness="1"
+                                BorderBrush="{DynamicResource MaterialDesignDivider}"
+                                Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource MaterialDesignChipBackground}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource PrimaryHueMidBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource PrimaryHueMidBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidForegroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- One horizontal bar in the Statistics charts -->
         <DataTemplate x:Key="StatBarTemplate">
             <Grid Margin="0,5">
@@ -223,6 +252,44 @@
                                         <TextBlock Text="{loc:Loc Config.AddFolder}" />
                                     </StackPanel>
                                 </Button>
+
+                                <!-- Excluded sub-folders -->
+                                <StackPanel Orientation="Horizontal" Margin="0,14,0,4">
+                                    <materialDesign:PackIcon Kind="FolderRemoveOutline" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                             Foreground="{StaticResource DangerBrush}" />
+                                    <TextBlock Text="{loc:Loc Config.ExcludedFolders}" FontWeight="Medium" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="{loc:Loc Config.ExcludedHint}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                <ItemsControl ItemsSource="{Binding ExcludedFolders}"
+                                              Visibility="{Binding ExcludedFolders.Count, Converter={StaticResource CountToVis}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="2">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <materialDesign:PackIcon Grid.Column="0" Kind="FolderCancelOutline" VerticalAlignment="Center" Margin="4,0" Opacity="0.7" />
+                                                <TextBlock Grid.Column="1" Text="{Binding}" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding}" />
+                                                <Button Grid.Column="2" Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0"
+                                                        Command="{Binding DataContext.RemoveExcludedFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}">
+                                                    <materialDesign:PackIcon Kind="Close" Width="16" Height="16" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Margin="0,6,0,0" HorizontalAlignment="Stretch"
+                                        Style="{StaticResource MaterialDesignFlatButton}"
+                                        Command="{Binding AddExcludedFolderCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="FolderRemoveOutline" Margin="0,0,6,0" />
+                                        <TextBlock Text="{loc:Loc Config.AddExcluded}" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </materialDesign:Card>
 
@@ -299,6 +366,27 @@
                                                              Foreground="{DynamicResource PrimaryHueMidBrush}" />
                                     <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Config.Filters}" />
                                 </StackPanel>
+
+                                <!-- File-type presets -->
+                                <TextBlock Text="{loc:Loc Config.FileTypes}" FontWeight="Medium" Margin="0,0,0,2" />
+                                <TextBlock Text="{loc:Loc Config.FileTypesHint}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                <ItemsControl ItemsSource="{Binding FileCategories}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:FileCategoryOption}">
+                                            <ToggleButton IsChecked="{Binding IsSelected}" Style="{StaticResource CategoryChip}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <materialDesign:PackIcon Kind="{Binding Icon}" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,5,0" />
+                                                    <TextBlock Text="{Binding Display}" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </ToggleButton>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <Separator Margin="0,8" Opacity="0.4" />
                                 <CheckBox Content="{loc:Loc Config.Recursive}" IsChecked="{Binding Recursive}" Margin="0,2" />
                                 <CheckBox Content="{loc:Loc Config.IncludeHidden}" IsChecked="{Binding IncludeHidden}" Margin="0,2" />
                                 <TextBox Margin="0,10,0,0"
@@ -458,32 +546,48 @@
                                             </StackPanel>
                                         </Grid>
 
-                                        <TextBox Margin="0,10,0,0"
+                                    </StackPanel>
+
+                                    <!-- ffmpeg tooling (always available, even before ticking Videos) -->
+                                    <TextBox Margin="0,12,0,0"
                                              IsEnabled="{Binding CanEditFfmpegPath}"
                                              materialDesign:HintAssist.Hint="{loc:Loc Config.Ffmpeg}"
                                              materialDesign:HintAssist.HelperText="ffmpeg + ffprobe"
                                              Style="{StaticResource MaterialDesignOutlinedTextBox}"
                                              Text="{Binding FfmpegPath, UpdateSourceTrigger=PropertyChanged}" />
-
-                                    <Button Margin="0,8,0,0" HorizontalAlignment="Stretch"
-                                            Style="{StaticResource MaterialDesignOutlinedButton}"
-                                            Command="{Binding DownloadFfmpegCommand}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <materialDesign:PackIcon Kind="Download" Margin="0,0,6,0" VerticalAlignment="Center" />
-                                            <TextBlock Text="{loc:Loc Action.DownloadFfmpeg}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                    <ProgressBar Margin="0,6,0,0" Height="5" Minimum="0" Maximum="100"
+                                    <Grid Margin="0,8,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0" HorizontalAlignment="Stretch"
+                                                Style="{StaticResource MaterialDesignRaisedSecondaryButton}"
+                                                materialDesign:ButtonAssist.CornerRadius="8"
+                                                Command="{Binding DownloadFfmpegCommand}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <materialDesign:PackIcon Kind="Download" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                                <TextBlock Text="{loc:Loc Action.DownloadFfmpeg}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="1" Margin="8,0,0,0" Width="38" Height="38" Padding="0"
+                                                Style="{StaticResource MaterialDesignIconButton}"
+                                                ToolTip="{loc:Loc Action.Cancel}"
+                                                Command="{Binding CancelFfmpegCommand}"
+                                                Visibility="{Binding IsDownloadingFfmpeg, Converter={StaticResource BoolToVis}}">
+                                            <materialDesign:PackIcon Kind="Close" />
+                                        </Button>
+                                    </Grid>
+                                    <ProgressBar Margin="0,8,0,0" Height="6" Minimum="0" Maximum="100"
                                                  Value="{Binding FfmpegDownloadProgress, Mode=OneWay}"
+                                                 IsIndeterminate="{Binding IsFfmpegProgressIndeterminate}"
                                                  Visibility="{Binding IsDownloadingFfmpeg, Converter={StaticResource BoolToVis}}" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                                         <materialDesign:PackIcon VerticalAlignment="Center" Margin="0,0,4,0" Width="16" Height="16"
                                                                  Kind="CheckCircle"
                                                                  Foreground="{DynamicResource SecondaryHueMidBrush}"
                                                                  Visibility="{Binding FfmpegReady, Converter={StaticResource BoolToVis}}" />
-                                        <TextBlock Text="{Binding FfmpegStatus}" FontSize="11" Opacity="0.75"
+                                        <TextBlock Text="{Binding FfmpegStatus}" FontSize="11" Opacity="0.85"
                                                    VerticalAlignment="Center" TextWrapping="Wrap" />
-                                    </StackPanel>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -521,13 +625,27 @@
 
                                 <Separator Margin="0,10" Opacity="0.4" />
 
-                                <!-- Resource usage -->
-                                <CheckBox IsChecked="{Binding GentleResourceUsage}" Margin="0,2">
-                                    <StackPanel>
-                                        <TextBlock Text="{loc:Loc Config.Gentle}" FontWeight="Medium" />
-                                        <TextBlock Text="{loc:Loc Adv.GentleDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                                <!-- Resource usage level -->
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="Speedometer" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Text="{loc:Loc Config.ResourceUsage}" FontWeight="Medium" VerticalAlignment="Center" />
                                     </StackPanel>
-                                </CheckBox>
+                                    <ComboBox Margin="0,6,0,0" ItemsSource="{Binding ResourceOptions}"
+                                              SelectedItem="{Binding SelectedResource}"
+                                              Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                              materialDesign:HintAssist.Hint="{loc:Loc Config.ResourceUsage}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:ResourceOption}">
+                                                <StackPanel Margin="0,2">
+                                                    <TextBlock Text="{Binding Label}" FontWeight="Medium" />
+                                                    <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
                             </StackPanel>
                         </materialDesign:Card>
 
@@ -1194,6 +1312,131 @@
                         </Grid>
                     </TabItem>
                 </TabControl>
+            </Grid>
+
+            <!-- ================= Scan progress modal ================= -->
+            <Grid Grid.Row="0" Grid.RowSpan="2" Background="#B3000000"
+                  Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}">
+                <materialDesign:Card UniformCornerRadius="18" Padding="28" Width="560"
+                                     VerticalAlignment="Center" HorizontalAlignment="Center"
+                                     materialDesign:ElevationAssist.Elevation="Dp5">
+                    <StackPanel>
+                        <!-- Title + phase -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <materialDesign:PackIcon Kind="FolderSearchOutline" Width="26" Height="26" VerticalAlignment="Center"
+                                                     Margin="0,0,10,0" Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                            <TextBlock Text="{loc:Loc Scan.Title}" FontSize="20" FontWeight="Bold" VerticalAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Overall circular progress with % (monotonic) -->
+                        <Grid Width="130" Height="130" HorizontalAlignment="Center" Margin="0,0,0,6">
+                            <ProgressBar Style="{StaticResource MaterialDesignCircularProgressBar}"
+                                         Width="130" Height="130" Minimum="0" Maximum="100"
+                                         Value="{Binding OverallProgress, Mode=OneWay}" />
+                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="30" FontWeight="Bold"
+                                       Text="{Binding OverallProgress, StringFormat={}{0:0}%}" />
+                        </Grid>
+                        <!-- ETA -->
+                        <TextBlock HorizontalAlignment="Center" Opacity="0.65" FontSize="12" Margin="0,0,0,10">
+                            <Run Text="{loc:Loc Scan.Remaining}" /><Run Text=" ~ " /><Run Text="{Binding ScanEtaDisplay, Mode=OneWay}" FontWeight="SemiBold" />
+                        </TextBlock>
+
+                        <!-- Phase explanation (fixed height so the modal never jumps) -->
+                        <Border Height="66" Margin="0,0,0,12" Padding="12,8" CornerRadius="8"
+                                Background="{DynamicResource MaterialDesignChipBackground}">
+                            <DockPanel VerticalAlignment="Center">
+                                <materialDesign:PackIcon DockPanel.Dock="Left" Kind="InformationOutline" Width="18" Height="18"
+                                                         VerticalAlignment="Top" Margin="0,1,8,0" Opacity="0.6"
+                                                         Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                <TextBlock Text="{Binding PhaseExplanation}" FontSize="12" Opacity="0.85"
+                                           TextWrapping="Wrap" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Current phase bar -->
+                        <DockPanel Margin="0,0,0,3">
+                            <TextBlock DockPanel.Dock="Right" Opacity="0.7" FontSize="12" Text="{Binding PhaseProgressText}" />
+                            <TextBlock FontWeight="Medium" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <ProgressBar Height="7" Minimum="0" Maximum="100" Margin="0,0,0,10"
+                                     Value="{Binding ProgressValue, Mode=OneWay}"
+                                     IsIndeterminate="{Binding IsIndeterminate}" />
+
+                        <!-- Current file bar (bytes, for large files) -->
+                        <DockPanel Margin="0,0,0,3"
+                                   Visibility="{Binding CurrentFileFraction, Converter={StaticResource FractionToVis}}">
+                            <TextBlock DockPanel.Dock="Right" Opacity="0.7" FontSize="12"
+                                       Text="{Binding CurrentFileFraction, StringFormat={}{0:P0}}" />
+                            <TextBlock Opacity="0.7" FontSize="12" Text="{loc:Loc Scan.CurrentFile}" />
+                        </DockPanel>
+                        <ProgressBar Height="5" Minimum="0" Maximum="1" Margin="0,0,0,14"
+                                     Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                     Value="{Binding CurrentFileFraction, Mode=OneWay}"
+                                     Visibility="{Binding CurrentFileFraction, Converter={StaticResource FractionToVis}}" />
+
+                        <!-- Live stats -->
+                        <UniformGrid Columns="4" Margin="0,0,0,16">
+                            <Border Style="{StaticResource StatCard}" MinWidth="0" Margin="4">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Scan.FilesFound}" />
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding FilesDiscovered, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" MinWidth="0" Margin="4">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Scan.Processed}" />
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding PhaseProcessed, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" MinWidth="0" Margin="4">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Scan.Duplicates}" />
+                                    <TextBlock FontSize="18" FontWeight="Bold" Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                               Text="{Binding GroupsFoundLive, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource StatCard}" MinWidth="0" Margin="4">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Scan.Elapsed}" />
+                                    <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding ScanElapsedDisplay, Mode=OneWay}" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <!-- "Where we are now" breadcrumb (fixed single line so the modal never resizes) -->
+                        <TextBlock Text="{loc:Loc Scan.Location}" FontSize="11" Opacity="0.6" Margin="2,0,0,4" />
+                        <Border Background="{DynamicResource MaterialDesignChipBackground}" CornerRadius="8" Padding="10,0" Height="40">
+                            <ItemsControl ItemsSource="{Binding PathSegments}" VerticalAlignment="Center" ClipToBounds="True">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <materialDesign:PackIcon Kind="ChevronRight" Width="14" Height="14" VerticalAlignment="Center" Opacity="0.5" />
+                                            <TextBlock Text="{Binding}" Margin="1,0,4,0" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
+                        <!-- Only the file name (short + fixed height) so the layout is stable -->
+                        <TextBlock Height="18" Margin="2,5,0,0" FontSize="11" Opacity="0.55"
+                                   TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"
+                                   Text="{Binding CurrentFileName}" ToolTip="{Binding CurrentFile}" />
+
+                        <!-- Cancel -->
+                        <Button Margin="0,18,0,0" HorizontalAlignment="Center"
+                                Style="{StaticResource MaterialDesignOutlinedButton}"
+                                materialDesign:ButtonAssist.CornerRadius="8"
+                                Command="{Binding CancelCommand}">
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="Close" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                <TextBlock Text="{loc:Loc Action.Cancel}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </materialDesign:Card>
             </Grid>
         </Grid>
     </materialDesign:DialogHost>

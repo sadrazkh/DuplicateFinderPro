@@ -27,6 +27,8 @@ public sealed class MainViewModel : ObservableObject
 
         AddFolderCommand = new RelayCommand(_ => AddFolders());
         RemoveFolderCommand = new RelayCommand(p => RemoveFolder(p as string));
+        AddExcludedFolderCommand = new RelayCommand(_ => AddExcludedFolders());
+        RemoveExcludedFolderCommand = new RelayCommand(p => { if (p is string s) ExcludedFolders.Remove(s); });
         ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsScanning);
         CancelCommand = new RelayCommand(_ => _cts?.Cancel(), _ => IsScanning);
         AutoSelectCommand = new RelayCommand(_ => AutoSelect(), _ => HasResults);
@@ -60,12 +62,24 @@ public sealed class MainViewModel : ObservableObject
         PhotosView = System.Windows.Data.CollectionViewSource.GetDefaultView(PhotoIssues);
         PhotosView.Filter = o => !ShowOnlyFlaggedPhotos || (o is PhotoIssueViewModel p && p.HasIssues);
 
+        _elapsedTimer.Tick += (_, _) =>
+        {
+            ScanElapsedDisplay = _scanWatch.Elapsed.ToString(@"mm\:ss");
+            UpdateEta();
+        };
+
         RefreshFfmpegStatus();
     }
 
     // ---- Configuration ----------------------------------------------------
 
     public ObservableCollection<string> Folders { get; } = new();
+
+    /// <summary>Sub-folders (absolute paths) to skip during the scan.</summary>
+    public ObservableCollection<string> ExcludedFolders { get; } = new();
+
+    /// <summary>File-type presets; none selected = scan every file.</summary>
+    public IReadOnlyList<FileCategoryOption> FileCategories { get; } = FileCategoryOption.CreateDefault();
 
     private bool _useExactContent = true;
     public bool UseExactContent { get => _useExactContent; set => SetProperty(ref _useExactContent, value); }
@@ -118,8 +132,26 @@ public sealed class MainViewModel : ObservableObject
     private int _videoOutroSkip = 5;
     public int VideoOutroSkip { get => _videoOutroSkip; set => SetProperty(ref _videoOutroSkip, Math.Clamp(value, 0, 40)); }
 
-    private bool _gentleResourceUsage = true;
-    public bool GentleResourceUsage { get => _gentleResourceUsage; set => SetProperty(ref _gentleResourceUsage, value); }
+    public IReadOnlyList<ResourceOption> ResourceOptions => ResourceOption.All;
+
+    private ResourceOption _selectedResource = ResourceOption.All[1]; // Balanced
+    public ResourceOption SelectedResource
+    {
+        get => _selectedResource;
+        set { if (SetProperty(ref _selectedResource, value)) OnPropertyChanged(nameof(GentleResourceUsage)); }
+    }
+
+    /// <summary>Everything except "Maximum" runs gently (low priority, ffmpeg -threads 1).</summary>
+    public bool GentleResourceUsage => _selectedResource.Level != ResourceUsageLevel.Maximum;
+
+    /// <summary>Degree of parallelism for hashing/media, derived from the chosen level.</summary>
+    private int ResolveParallelism() => _selectedResource.Level switch
+    {
+        ResourceUsageLevel.Maximum => Environment.ProcessorCount,
+        ResourceUsageLevel.Balanced => Math.Max(2, Environment.ProcessorCount / 2),
+        ResourceUsageLevel.Light => 1,
+        _ => Math.Max(2, Environment.ProcessorCount / 2),
+    };
 
     private string _ffmpegPath = string.Empty;
     public string FfmpegPath
@@ -139,6 +171,12 @@ public sealed class MainViewModel : ObservableObject
 
     private double _ffmpegDownloadProgress;
     public double FfmpegDownloadProgress { get => _ffmpegDownloadProgress; private set => SetProperty(ref _ffmpegDownloadProgress, value); }
+
+    private bool _isFfmpegProgressIndeterminate;
+    public bool IsFfmpegProgressIndeterminate { get => _isFfmpegProgressIndeterminate; private set => SetProperty(ref _isFfmpegProgressIndeterminate, value); }
+
+    public RelayCommand CancelFfmpegCommand => _cancelFfmpegCommand ??= new RelayCommand(_ => CancelFfmpegDownload());
+    private RelayCommand? _cancelFfmpegCommand;
 
     private string _ffmpegStatus = string.Empty;
     public string FfmpegStatus { get => _ffmpegStatus; private set => SetProperty(ref _ffmpegStatus, value); }
@@ -172,7 +210,72 @@ public sealed class MainViewModel : ObservableObject
     public bool IsIndeterminate { get => _isIndeterminate; private set => SetProperty(ref _isIndeterminate, value); }
 
     private string? _currentFile;
-    public string? CurrentFile { get => _currentFile; private set => SetProperty(ref _currentFile, value); }
+    public string? CurrentFile
+    {
+        get => _currentFile;
+        private set { if (SetProperty(ref _currentFile, value)) UpdatePathSegments(value); }
+    }
+
+    // ---- Live scan telemetry (progress modal) -----------------------------
+
+    /// <summary>Breadcrumb of the folder currently being processed (the "tree").</summary>
+    public ObservableCollection<string> PathSegments { get; } = new();
+
+    private long _filesDiscovered;
+    public long FilesDiscovered { get => _filesDiscovered; private set => SetProperty(ref _filesDiscovered, value); }
+
+    private long _phaseProcessed;
+    public long PhaseProcessed { get => _phaseProcessed; private set => SetProperty(ref _phaseProcessed, value); }
+
+    private long _phaseTotal;
+    public long PhaseTotal { get => _phaseTotal; private set => SetProperty(ref _phaseTotal, value); }
+
+    private int _groupsFoundLive;
+    public int GroupsFoundLive { get => _groupsFoundLive; private set => SetProperty(ref _groupsFoundLive, value); }
+
+    private string _phaseProgressText = string.Empty;
+    public string PhaseProgressText { get => _phaseProgressText; private set => SetProperty(ref _phaseProgressText, value); }
+
+    private string _scanElapsedDisplay = "00:00";
+    public string ScanElapsedDisplay { get => _scanElapsedDisplay; private set => SetProperty(ref _scanElapsedDisplay, value); }
+
+    /// <summary>Overall scan progress 0..100, monotonic (never goes backward).</summary>
+    private double _overall;
+    public double OverallProgress { get => _overall; private set => SetProperty(ref _overall, value); }
+
+    private string _scanEtaDisplay = "…";
+    public string ScanEtaDisplay { get => _scanEtaDisplay; private set => SetProperty(ref _scanEtaDisplay, value); }
+
+    private double _currentFileFraction;
+    public double CurrentFileFraction { get => _currentFileFraction; private set => SetProperty(ref _currentFileFraction, value); }
+
+    private string? _currentFileName;
+    public string? CurrentFileName { get => _currentFileName; private set => SetProperty(ref _currentFileName, value); }
+
+    private string _phaseExplanation = string.Empty;
+    public string PhaseExplanation { get => _phaseExplanation; private set => SetProperty(ref _phaseExplanation, value); }
+
+    // Phases weighted by their real cost, so the bar/ETA reflect that full
+    // content hashing dominates the runtime (not equal-sized slots).
+    private readonly List<(ScanPhase Phase, double Weight)> _expectedPhases = new();
+
+    private readonly Stopwatch _scanWatch = new();
+    private readonly System.Windows.Threading.DispatcherTimer _elapsedTimer =
+        new() { Interval = TimeSpan.FromMilliseconds(500) };
+
+    private void UpdatePathSegments(string? fullPath)
+    {
+        CurrentFileName = string.IsNullOrEmpty(fullPath) ? null : Path.GetFileName(fullPath);
+        PathSegments.Clear();
+        if (string.IsNullOrEmpty(fullPath)) return;
+        var dir = Path.GetDirectoryName(fullPath);
+        if (string.IsNullOrEmpty(dir)) return;
+        var parts = dir.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                              StringSplitOptions.RemoveEmptyEntries);
+        // Show the last few segments so we can see "where we are now".
+        foreach (var p in parts.TakeLast(5))
+            PathSegments.Add(p);
+    }
 
     // ---- Results ----------------------------------------------------------
 
@@ -253,6 +356,8 @@ public sealed class MainViewModel : ObservableObject
 
     public RelayCommand AddFolderCommand { get; }
     public RelayCommand RemoveFolderCommand { get; }
+    public RelayCommand AddExcludedFolderCommand { get; }
+    public RelayCommand RemoveExcludedFolderCommand { get; }
     public AsyncRelayCommand ScanCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand AutoSelectCommand { get; }
@@ -302,6 +407,19 @@ public sealed class MainViewModel : ObservableObject
         if (path is not null) Folders.Remove(path);
     }
 
+    public void AddExcludedFolders()
+    {
+        foreach (var folder in _dialogs.PickFolders(L("Config.AddExcluded")))
+            AddExcludedFolder(folder);
+    }
+
+    public void AddExcludedFolder(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path)) return;
+        if (!ExcludedFolders.Contains(path, StringComparer.OrdinalIgnoreCase))
+            ExcludedFolders.Add(path);
+    }
+
     // ---- Scan -------------------------------------------------------------
 
     private async Task ScanAsync()
@@ -333,6 +451,21 @@ public sealed class MainViewModel : ObservableObject
         MethodBars.Clear();
         PhotoFlagBars.Clear();
         TopGroups.Clear();
+
+        // Reset live telemetry + start the elapsed clock for the progress modal.
+        FilesDiscovered = 0;
+        PhaseProcessed = 0;
+        PhaseTotal = 0;
+        GroupsFoundLive = 0;
+        PhaseProgressText = string.Empty;
+        PathSegments.Clear();
+        ScanElapsedDisplay = "00:00";
+        ScanEtaDisplay = "…";
+        OverallProgress = 0;
+        CurrentFileFraction = 0;
+        BuildExpectedPhases(methods);
+        _scanWatch.Restart();
+        _elapsedTimer.Start();
         OnResultsChanged();
 
         var options = BuildOptions(methods);
@@ -356,6 +489,8 @@ public sealed class MainViewModel : ObservableObject
         }
         finally
         {
+            _scanWatch.Stop();
+            _elapsedTimer.Stop();
             IsScanning = false;
             IsIndeterminate = false;
             ProgressValue = 0;
@@ -378,12 +513,15 @@ public sealed class MainViewModel : ObservableObject
     private ScanOptions BuildOptions(DetectionMethod methods) => new()
     {
         RootFolders = Folders.ToList(),
+        ExcludedFolders = ExcludedFolders.ToList(),
         Methods = methods,
         Recursive = Recursive,
         IncludeHidden = IncludeHidden,
         MinFileSizeBytes = MinSizeKb * 1024,
         MaxFileSizeBytes = MaxSizeKb * 1024,
-        IncludeExtensions = ParseExtensions(IncludeExtensions),
+        MaxDegreeOfParallelism = ResolveParallelism(),
+        MaxConcurrentVideoJobs = SelectedResource.Level == ResourceUsageLevel.Light ? 1 : 0,
+        IncludeExtensions = BuildIncludeExtensions(),
         ExcludeExtensions = ParseExtensions(ExcludeExtensions),
         NameSimilarityThreshold = NameThreshold,
         PerceptualThreshold = PerceptualThreshold,
@@ -399,6 +537,19 @@ public sealed class MainViewModel : ObservableObject
         BlurThreshold = BlurThreshold,
     };
 
+    /// <summary>
+    /// The scan's include-extension set: the union of every selected file-type
+    /// preset plus anything typed in the custom box. Empty = scan all files.
+    /// </summary>
+    private HashSet<string> BuildIncludeExtensions()
+    {
+        var set = ParseExtensions(IncludeExtensions);
+        foreach (var category in FileCategories.Where(c => c.IsSelected))
+            foreach (var ext in category.Extensions)
+                set.Add(ext);
+        return set;
+    }
+
     private static HashSet<string> ParseExtensions(string raw)
     {
         var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -413,10 +564,99 @@ public sealed class MainViewModel : ObservableObject
 
     private void OnProgress(ScanProgress p)
     {
+        // Lightweight per-file byte progress: only moves the "current file" bar.
+        if (p.IsFileTick)
+        {
+            CurrentFileFraction = p.CurrentFileFraction;
+            if (!string.IsNullOrEmpty(p.CurrentFile)) CurrentFile = p.CurrentFile;
+            return;
+        }
+
         StatusText = Localization.Localization.Instance[p.StatusKey];
+        PhaseExplanation = Localization.Localization.Instance[PhaseExplanationKey(p.Phase)];
         CurrentFile = p.CurrentFile;
+        CurrentFileFraction = 0;
         IsIndeterminate = p.Total <= 0 && p.Phase is not ScanPhase.Completed;
         ProgressValue = p.Percentage;
+
+        if (p.Phase == ScanPhase.Enumerating)
+            FilesDiscovered = Math.Max(FilesDiscovered, p.Processed);
+
+        PhaseProcessed = p.Processed;
+        PhaseTotal = p.Total;
+        PhaseProgressText = p.Total > 0 ? $"{p.Processed:N0} / {p.Total:N0}" : $"{p.Processed:N0}";
+        if (p.GroupsFound > 0) GroupsFoundLive = p.GroupsFound;
+
+        UpdateOverall(p);
+    }
+
+    /// <summary>Monotonic 0..100 estimate; phases are weighted by real cost.</summary>
+    private void UpdateOverall(ScanProgress p)
+    {
+        if (_expectedPhases.Count == 0) return;
+
+        if (p.Phase == ScanPhase.Completed) { SetOverall(100); return; }
+
+        var index = _expectedPhases.FindIndex(x => x.Phase == p.Phase);
+        if (index < 0) return; // unknown phase — keep the last value
+
+        double fraction = p.Phase == ScanPhase.Enumerating
+            ? 1.0 - 1.0 / (1.0 + FilesDiscovered / 500.0)   // creeps toward 1 as files are found
+            : (p.Total > 0 ? Math.Clamp((double)p.Processed / p.Total, 0, 1) : 0);
+
+        double totalWeight = _expectedPhases.Sum(x => x.Weight);
+        double before = 0;
+        for (var i = 0; i < index; i++) before += _expectedPhases[i].Weight;
+
+        SetOverall((before + fraction * _expectedPhases[index].Weight) / totalWeight * 100.0);
+    }
+
+    private static string PhaseExplanationKey(ScanPhase phase) => phase switch
+    {
+        ScanPhase.Enumerating => "Explain.Enumerating",
+        ScanPhase.QuickHashing => "Explain.QuickScan",
+        ScanPhase.HashingContent => "Explain.HashingContent",
+        ScanPhase.MatchingNames => "Explain.MatchingNames",
+        ScanPhase.HashingPerceptual => "Explain.HashingPerceptual",
+        ScanPhase.SamplingVideo => "Explain.SamplingVideo",
+        ScanPhase.AnalyzingPhotos => "Explain.AnalyzingPhotos",
+        ScanPhase.Finalizing => "Explain.Finalizing",
+        _ => "Explain.Enumerating",
+    };
+
+    private void SetOverall(double value)
+    {
+        value = Math.Max(_overall, Math.Min(100, value)); // never go backward
+        OverallProgress = value;
+        UpdateEta();
+    }
+
+    private void UpdateEta()
+    {
+        var secs = _scanWatch.Elapsed.TotalSeconds;
+        if (_overall < 2 || _overall >= 99.5 || secs < 1)
+        {
+            ScanEtaDisplay = "…";
+            return;
+        }
+        var remaining = secs * (100 - _overall) / _overall;
+        ScanEtaDisplay = TimeSpan.FromSeconds(remaining).ToString(@"mm\:ss");
+    }
+
+    private void BuildExpectedPhases(DetectionMethod methods)
+    {
+        _expectedPhases.Clear();
+        _expectedPhases.Add((ScanPhase.Enumerating, 1));
+        if (methods.HasFlag(DetectionMethod.ExactContent))
+        {
+            _expectedPhases.Add((ScanPhase.QuickHashing, 2));
+            _expectedPhases.Add((ScanPhase.HashingContent, 20)); // dominant cost
+        }
+        if (methods.HasFlag(DetectionMethod.NameSimilarity)) _expectedPhases.Add((ScanPhase.MatchingNames, 1));
+        if (methods.HasFlag(DetectionMethod.PerceptualImage)) _expectedPhases.Add((ScanPhase.HashingPerceptual, 8));
+        if (methods.HasFlag(DetectionMethod.PerceptualVideo)) _expectedPhases.Add((ScanPhase.SamplingVideo, 15));
+        if (AnalyzePhotoQuality) _expectedPhases.Add((ScanPhase.AnalyzingPhotos, 6));
+        _expectedPhases.Add((ScanPhase.Finalizing, 0.5));
     }
 
     private void ApplyResult(ScanResult result)
@@ -759,17 +999,30 @@ public sealed class MainViewModel : ObservableObject
 
     // ---- ffmpeg auto-provisioning ----------------------------------------
 
+    private CancellationTokenSource? _ffmpegCts;
+
     private async Task DownloadFfmpegAsync()
     {
         IsDownloadingFfmpeg = true;
         FfmpegDownloadProgress = 0;
+        IsFfmpegProgressIndeterminate = true; // until we know the size
         FfmpegStatus = L("Ffmpeg.Downloading");
+        _ffmpegCts = new CancellationTokenSource();
         try
         {
-            var progress = new Progress<double>(p => FfmpegDownloadProgress = p);
-            var path = await _ffmpegInstaller.InstallAsync(progress, CancellationToken.None);
+            var progress = new Progress<double>(p =>
+            {
+                if (p < 0) { IsFfmpegProgressIndeterminate = true; return; }
+                IsFfmpegProgressIndeterminate = false;
+                FfmpegDownloadProgress = p;
+            });
+            var path = await _ffmpegInstaller.InstallAsync(progress, _ffmpegCts.Token);
             FfmpegPath = path;
             FfmpegStatus = L("Ffmpeg.Done");
+        }
+        catch (OperationCanceledException)
+        {
+            FfmpegStatus = L("Ffmpeg.Missing");
         }
         catch (Exception ex)
         {
@@ -779,9 +1032,14 @@ public sealed class MainViewModel : ObservableObject
         finally
         {
             IsDownloadingFfmpeg = false;
+            IsFfmpegProgressIndeterminate = false;
+            _ffmpegCts?.Dispose();
+            _ffmpegCts = null;
             RefreshFfmpegStatus();
         }
     }
+
+    public void CancelFfmpegDownload() => _ffmpegCts?.Cancel();
 
     private void RefreshFfmpegStatus()
     {
@@ -818,13 +1076,21 @@ public sealed class MainViewModel : ObservableObject
         VideoSamples = s.VideoSamples;
         VideoIntroSkip = s.VideoIntroSkipPercent;
         VideoOutroSkip = s.VideoOutroSkipPercent;
-        GentleResourceUsage = s.GentleResourceUsage;
+        SelectedResource = ResourceOption.All.FirstOrDefault(r => r.Level == s.ResourceUsage) ?? ResourceOption.All[1];
         FfmpegPath = s.FfmpegPath;
         SelectedKeepRule = KeepRuleOption.All.FirstOrDefault(k => k.Rule == s.KeepRule) ?? KeepRuleOption.All[0];
 
         Folders.Clear();
         foreach (var folder in s.Folders)
             AddFolder(folder);
+
+        ExcludedFolders.Clear();
+        foreach (var folder in s.ExcludedFolders)
+            AddExcludedFolder(folder);
+
+        var selected = new HashSet<string>(s.SelectedCategories, StringComparer.OrdinalIgnoreCase);
+        foreach (var cat in FileCategories)
+            cat.IsSelected = selected.Contains(cat.Key);
     }
 
     public void CaptureSettings(AppSettings s)
@@ -846,10 +1112,12 @@ public sealed class MainViewModel : ObservableObject
         s.VideoSamples = VideoSamples;
         s.VideoIntroSkipPercent = VideoIntroSkip;
         s.VideoOutroSkipPercent = VideoOutroSkip;
-        s.GentleResourceUsage = GentleResourceUsage;
+        s.ResourceUsage = SelectedResource.Level;
         s.FfmpegPath = FfmpegPath;
         s.KeepRule = SelectedKeepRule.Rule;
         s.Folders = Folders.ToList();
+        s.ExcludedFolders = ExcludedFolders.ToList();
+        s.SelectedCategories = FileCategories.Where(c => c.IsSelected).Select(c => c.Key).ToList();
     }
 
     // ---- Export -----------------------------------------------------------

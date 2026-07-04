@@ -34,10 +34,12 @@ public sealed class ExactContentDetector : IDuplicateDetector
             ? options.MaxDegreeOfParallelism
             : Environment.ProcessorCount;
 
-        // Stage 2 — quick hash (size + head/tail sample).
+        // Stage 2 — quick hash (size + head/tail sample). A cheap pre-filter so
+        // most files never need a full read. Each file is hashed at most twice
+        // overall, so the whole detector stays O(n), not O(n²).
         var quickGroups = await HashAsync(
-            bySize, dop, ct, progress, ScanPhase.HashingContent,
-            async f => $"{f.Length}:{await ContentHasher.QuickHashAsync(f.FullPath, f.Length, ct)}");
+            bySize, dop, ct, progress, ScanPhase.QuickHashing, "Status.QuickScan",
+            async (f, _) => $"{f.Length}:{await ContentHasher.QuickHashAsync(f.FullPath, f.Length, ct)}");
 
         var quickCandidates = quickGroups
             .Where(kv => kv.Value.Count > 1)
@@ -47,12 +49,12 @@ public sealed class ExactContentDetector : IDuplicateDetector
         if (quickCandidates.Count == 0)
             return Array.Empty<DuplicateGroup>();
 
-        // Stage 3 — full hash confirmation.
+        // Stage 3 — full hash confirmation (only the survivors).
         var fullGroups = await HashAsync(
-            quickCandidates, dop, ct, progress, ScanPhase.HashingContent,
-            async f =>
+            quickCandidates, dop, ct, progress, ScanPhase.HashingContent, "Status.HashingContent",
+            async (f, fileProgress) =>
             {
-                f.ContentHash = await ContentHasher.FullHashAsync(f.FullPath, ct);
+                f.ContentHash = await ContentHasher.FullHashAsync(f.FullPath, ct, fileProgress, f.Length);
                 return $"{f.Length}:{f.ContentHash}";
             });
 
@@ -72,7 +74,8 @@ public sealed class ExactContentDetector : IDuplicateDetector
         CancellationToken ct,
         IProgress<ScanProgress> progress,
         ScanPhase phase,
-        Func<FileItem, Task<string>> keySelector)
+        string statusKey,
+        Func<FileItem, IProgress<double>, Task<string>> keySelector)
     {
         var result = new ConcurrentDictionary<string, List<FileItem>>();
         var processed = 0L;
@@ -84,24 +87,40 @@ public sealed class ExactContentDetector : IDuplicateDetector
             new ParallelOptions { MaxDegreeOfParallelism = dop, CancellationToken = ct },
             async (file, token) =>
             {
+                // Per-file byte progress → a lightweight "file tick" for the UI bar.
+                var fileProgress = new Progress<double>(frac => progress.Report(new ScanProgress
+                {
+                    Phase = phase,
+                    StatusKey = statusKey,
+                    CurrentFile = file.FullPath,
+                    CurrentFileFraction = frac,
+                    IsFileTick = true,
+                }));
+
                 try
                 {
-                    var key = await keySelector(file);
+                    var key = await keySelector(file, fileProgress);
                     var list = result.GetOrAdd(key, _ => new List<FileItem>());
                     lock (list) list.Add(file);
                 }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                catch (OperationCanceledException)
                 {
+                    throw;
+                }
+                catch
+                {
+                    // Any unreadable/odd file (locked, exe in use, weird path) is
+                    // skipped rather than failing the whole scan.
                     failures.Add(file.FullPath);
                 }
 
                 var done = Interlocked.Increment(ref processed);
-                if (done % 16 == 0 || done == total)
+                if (done % 8 == 0 || done == total)
                 {
                     progress.Report(new ScanProgress
                     {
                         Phase = phase,
-                        StatusKey = "Status.HashingContent",
+                        StatusKey = statusKey,
                         Total = total,
                         Processed = done,
                         CurrentFile = file.FullPath,

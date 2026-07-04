@@ -5,6 +5,7 @@ public enum ScanPhase
 {
     Idle,
     Enumerating,
+    QuickHashing,
     HashingContent,
     MatchingNames,
     HashingPerceptual,
@@ -37,6 +38,12 @@ public sealed record ScanProgress
 
     /// <summary>Groups discovered so far.</summary>
     public int GroupsFound { get; init; }
+
+    /// <summary>Fraction (0..1) of the file currently being hashed (big files).</summary>
+    public double CurrentFileFraction { get; init; }
+
+    /// <summary>True for lightweight per-file byte-progress pings (no count update).</summary>
+    public bool IsFileTick { get; init; }
 
     public double Percentage => Total <= 0 ? 0 : Math.Min(100.0, Processed * 100.0 / Total);
 }

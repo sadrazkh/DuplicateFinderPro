@@ -107,6 +107,16 @@ public sealed class StringToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
+/// <summary>A fraction &gt; 0 → Visible (used to show a bar only while active).</summary>
+public sealed class FractionToVisibilityConverter : IValueConverter
+{
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => value is double d && d > 0.0001 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => throw new NotSupportedException();
+}
+
 /// <summary>DateTime (UTC) → local short string.</summary>
 public sealed class UtcToLocalConverter : IValueConverter
 {

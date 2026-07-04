@@ -21,6 +21,7 @@
             <conv:StringToVisibilityConverter x:Key="StringToVis" />
             <conv:UtcToLocalConverter x:Key="UtcToLocal" />
             <conv:ThumbnailConverter x:Key="Thumbnail" />
+            <conv:FractionToVisibilityConverter x:Key="FractionToVis" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

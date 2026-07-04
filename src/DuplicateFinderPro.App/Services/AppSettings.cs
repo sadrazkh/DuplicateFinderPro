@@ -18,6 +18,9 @@ public sealed class AppSettings
 
     public bool Recursive { get; set; } = true;
     public bool IncludeHidden { get; set; }
+    public ViewModels.ResourceUsageLevel ResourceUsage { get; set; } = ViewModels.ResourceUsageLevel.Balanced;
+    public List<string> ExcludedFolders { get; set; } = new();
+    public List<string> SelectedCategories { get; set; } = new();
     public long MinSizeKb { get; set; } = 1;
     public long MaxSizeKb { get; set; }
     public string IncludeExtensions { get; set; } = string.Empty;
