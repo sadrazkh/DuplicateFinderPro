@@ -106,6 +106,42 @@ public sealed class FfmpegVideoHasher
         return positions;
     }
 
+    /// <summary>
+    /// Writes a single JPEG frame taken from the middle of the video to
+    /// <paramref name="outputImagePath"/> (for a preview thumbnail). Returns
+    /// true on success. No-op if ffmpeg is unavailable.
+    /// </summary>
+    public async Task<bool> ExtractThumbnailAsync(string videoPath, string outputImagePath, bool gentle, CancellationToken ct)
+    {
+        if (!IsAvailable) return false;
+
+        var duration = await ProbeDurationSecondsAsync(videoPath, ct);
+        var position = duration > 0 ? duration * 0.5 : 5;
+        var threads = gentle ? "-threads 1 " : string.Empty;
+
+        var args = string.Create(CultureInfo.InvariantCulture,
+            $"-hide_banner -loglevel error -y -ss {position:0.###} {threads}-i \"{videoPath}\" " +
+            $"-frames:v 1 -vf scale=640:-2 -q:v 4 \"{outputImagePath}\"");
+
+        using var proc = StartProcess(_ffmpeg, args, redirectStdout: false);
+        if (proc is null) return false;
+        if (gentle) TrySetPriority(proc, ProcessPriorityClass.BelowNormal);
+
+        var drainErr = proc.StandardError.ReadToEndAsync(ct);
+        try
+        {
+            await proc.WaitForExitAsync(ct);
+            await drainErr;
+        }
+        catch (OperationCanceledException)
+        {
+            TryKill(proc);
+            throw;
+        }
+
+        return File.Exists(outputImagePath) && new FileInfo(outputImagePath).Length > 0;
+    }
+
     /// <summary>Extracts a single downscaled PNG frame at the given timestamp.</summary>
     private async Task<byte[]?> ExtractFrameAsync(string path, double seconds, bool gentle, CancellationToken ct)
     {

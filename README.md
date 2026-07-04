@@ -48,7 +48,10 @@ Built with **.NET 10 + WPF** and **Material Design**, with a clean, testable eng
 - **Recursive by default** — point it at one root folder and it walks **every** sub-folder. Duplicates are matched **across the whole tree**, so the same file sitting in two different folders is still found.
 - **Four detection methods**, mix and match freely (see [below](#-how-the-detection-works)):
   - Exact content (hash) · File-name similarity · Look-alike images · Look-alike videos.
-- **Modern Material Design UI** with a teal→green theme, light/dark toggle, and readable typography.
+- **Photo Cleanup mode** — analyses your images and flags **blurry**, **dark**, **overexposed**, **low-resolution** and **screenshot** photos, so tidying a phone gallery takes seconds. Each photo shows a thumbnail, a keep-worthiness score and its issues, with copyable paths and one-click Recycle/Move/Delete.
+- **Real previews everywhere** — inline thumbnails in every list, an enlarged preview on hover, and for videos a **frame grabbed from the middle of the film** so you can tell what it is at a glance.
+- **Statistics dashboard** — an attractive tab with overview cards and bar charts: size by file type, reclaimable space by method, photo-quality breakdown, and your largest duplicate groups.
+- **Modern Material Design UI** with a teal→green theme, light/dark toggle, tabbed layout and readable typography.
 - **Fully bilingual, live switching** — English (LTR) ⇄ فارسی (RTL) with no restart. English is the default.
 - **Drag-and-drop folders**, plus filters for extensions, min/max size, and hidden/system files.
 - **One-click ffmpeg** — the video method needs ffmpeg; if it's missing, the app can **download it automatically** into its own data folder.
@@ -97,6 +100,17 @@ Uses **ffmpeg** to sample frames and reduce each to a perceptual signature, then
 
 > ✔ Finds the same movie under a different name, container or quality.
 > ⚠ Requires ffmpeg and is the heaviest method (CPU + time).
+
+### Photo Cleanup — _is this photo worth keeping?_
+A separate pass (tick **Photo quality analysis**) scores every image and flags the junk that clutters phone galleries:
+- **Blurry** — via the variance of the Laplacian (low = out of focus).
+- **Dark** / **Overexposed** — mean luminance too low/high.
+- **Low-resolution** — tiny images (thumbnails/junk).
+- **Screenshot** — recognised by filename and common screen resolutions.
+
+Results land in the **Photo Cleanup** tab with a thumbnail, a 0–100 keep score and the detected issues. Filter to *only flagged*, auto-select them all, and Recycle/Move/Delete.
+
+> ⚠ Quality is subjective — the score is a helper, not a verdict. Review (the thumbnails make it quick) before deleting.
 
 ---
 

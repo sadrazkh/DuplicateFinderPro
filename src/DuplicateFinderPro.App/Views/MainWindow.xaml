@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:loc="clr-namespace:DuplicateFinderPro.App.Localization"
+        xmlns:ctrl="clr-namespace:DuplicateFinderPro.App.Controls"
         xmlns:vm="clr-namespace:DuplicateFinderPro.App.ViewModels"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         d:DataContext="{d:DesignInstance vm:MainViewModel}"
@@ -88,6 +89,24 @@
             <Setter Property="materialDesign:ButtonAssist.CornerRadius" Value="10" />
             <Setter Property="materialDesign:ElevationAssist.Elevation" Value="Dp3" />
         </Style>
+
+        <!-- One horizontal bar in the Statistics charts -->
+        <DataTemplate x:Key="StatBarTemplate">
+            <Grid Margin="0,5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0" Margin="0,0,0,3">
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding ValueText}" FontWeight="SemiBold" Opacity="0.85" />
+                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" Opacity="0.85" />
+                </DockPanel>
+                <ProgressBar Grid.Row="1" Height="9" Minimum="0" Maximum="100"
+                             Value="{Binding Percent, Mode=OneWay}"
+                             Foreground="{Binding Brush}"
+                             Background="{DynamicResource MaterialDesignDivider}" />
+            </Grid>
+        </DataTemplate>
     </Window.Resources>
 
     <materialDesign:DialogHost Identifier="Root">
@@ -253,6 +272,18 @@
                                         <StackPanel>
                                             <TextBlock Text="{loc:Loc Method.PerceptualVideo}" FontWeight="Medium" />
                                             <TextBlock Text="{loc:Loc Method.PerceptualVideo.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </CheckBox>
+
+                                <Separator Margin="0,6" Opacity="0.4" />
+                                <CheckBox IsChecked="{Binding AnalyzePhotoQuality}" Margin="0,5">
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ImageSearchOutline" Width="22" Height="22" Margin="2,1,10,0" VerticalAlignment="Top"
+                                                                 Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{loc:Loc Method.PhotoQuality}" FontWeight="Medium" />
+                                            <TextBlock Text="{loc:Loc Method.PhotoQuality.Desc}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
                                         </StackPanel>
                                     </StackPanel>
                                 </CheckBox>
@@ -458,6 +489,38 @@
 
                                 <Separator Margin="0,10" Opacity="0.4" />
 
+                                <!-- Photo quality -->
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <materialDesign:PackIcon Kind="ImageSearchOutline" VerticalAlignment="Center" Margin="0,0,6,0"
+                                                                 Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                                        <TextBlock Text="{loc:Loc Adv.PhotoSection}" FontWeight="Medium" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Text="{loc:Loc Adv.EnableHint}" FontSize="11" FontStyle="Italic" Opacity="0.7" TextWrapping="Wrap" Margin="0,2,0,0"
+                                               Foreground="{DynamicResource PrimaryHueMidBrush}"
+                                               Visibility="{Binding AnalyzePhotoQuality, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+                                    <StackPanel IsEnabled="{Binding AnalyzePhotoQuality}">
+                                        <TextBlock Text="{loc:Loc Adv.PhotoDesc}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="0,2,0,2" />
+                                        <StackPanel Orientation="Horizontal" Margin="0,1">
+                                            <materialDesign:PackIcon Kind="CheckCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                            <TextBlock Text="{loc:Loc Adv.PhotoPro}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,1,0,4">
+                                            <materialDesign:PackIcon Kind="AlertCircleOutline" Width="14" Height="14" VerticalAlignment="Center" Margin="0,0,4,0" Foreground="#FFB300" />
+                                            <TextBlock Text="{loc:Loc Adv.PhotoCon}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <TextBlock Text="{loc:Loc Config.BlurSensitivity}" FontSize="12" Opacity="0.8" Margin="0,4,0,0" />
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" MinWidth="46" TextAlignment="Center"
+                                                       Text="{Binding BlurThreshold, StringFormat={}{0:0}}" VerticalAlignment="Center" />
+                                            <Slider Minimum="40" Maximum="300" TickFrequency="10" IsSnapToTickEnabled="True"
+                                                    Value="{Binding BlurThreshold}" Margin="0,0,8,0" />
+                                        </DockPanel>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <Separator Margin="0,10" Opacity="0.4" />
+
                                 <!-- Resource usage -->
                                 <CheckBox IsChecked="{Binding GentleResourceUsage}" Margin="0,2">
                                     <StackPanel>
@@ -504,8 +567,18 @@
                 <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Center"
                               VerticalAlignment="Stretch" Background="{DynamicResource MaterialDesignDivider}" />
 
-                <!-- ===== Right: results ===== -->
-                <Grid Grid.Column="2" Margin="4">
+                <!-- ===== Right: tabbed results ===== -->
+                <TabControl Grid.Column="2" Margin="6,8,8,6" Padding="0"
+                            Background="Transparent" BorderThickness="0">
+                    <!-- ============ Tab: Duplicates ============ -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="FileMultipleOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="{loc:Loc Tab.Duplicates}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </TabItem.Header>
+                <Grid Margin="0,6,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -703,6 +776,18 @@
                                                         <DataGridCheckBoxColumn Header="{loc:Loc Grid.Keep}"
                                                                                 Binding="{Binding IsMarkedForRemoval, UpdateSourceTrigger=PropertyChanged}"
                                                                                 Width="Auto" />
+                                                        <DataGridTemplateColumn Header="{loc:Loc Grid.Preview}" Width="Auto">
+                                                            <DataGridTemplateColumn.CellTemplate>
+                                                                <DataTemplate>
+                                                                    <Border Width="56" Height="40" CornerRadius="4" Margin="0,2"
+                                                                            Background="{DynamicResource MaterialDesignChipBackground}" ClipToBounds="True">
+                                                                        <ctrl:AsyncThumbnail DecodeWidth="120"
+                                                                                             MediaPath="{Binding FullPath}"
+                                                                                             MediaExtension="{Binding Extension}" />
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </DataGridTemplateColumn.CellTemplate>
+                                                        </DataGridTemplateColumn>
                                                         <DataGridTemplateColumn Header="{loc:Loc Grid.File}" Width="2*"
                                                                                 SortMemberPath="FileName">
                                                             <DataGridTemplateColumn.CellTemplate>
@@ -836,6 +921,279 @@
                         </DockPanel>
                     </materialDesign:Card>
                 </Grid>
+                    </TabItem>
+
+                    <!-- ============ Tab: Photo Cleanup ============ -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ImageSearchOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="{loc:Loc Tab.PhotoCleanup}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Photo toolbar -->
+                            <materialDesign:Card Grid.Row="0" Style="{StaticResource Section}">
+                                <WrapPanel VerticalAlignment="Center">
+                                    <CheckBox Content="{loc:Loc Photo.ShowOnlyFlagged}" IsChecked="{Binding ShowOnlyFlaggedPhotos}"
+                                              VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <Button Style="{StaticResource MaterialDesignRaisedSecondaryButton}" Margin="0,0,8,0"
+                                            Command="{Binding SelectFlaggedPhotosCommand}" Content="{loc:Loc Photo.SelectFlagged}" />
+                                    <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,12,0"
+                                            Command="{Binding ClearPhotoSelectionCommand}" Content="{loc:Loc Action.ClearSelection}" />
+                                    <TextBlock VerticalAlignment="Center" Opacity="0.8">
+                                        <Run Text="{Binding PhotoIssues.Count, Mode=OneWay}" FontWeight="Bold" />
+                                        <Run Text="{loc:Loc Photo.Analyzed}" />
+                                        <Run Text="  ·  " />
+                                        <Run Text="{Binding FlaggedPhotoCount, Mode=OneWay}" FontWeight="Bold" Foreground="#F59E0B" />
+                                        <Run Text="{loc:Loc Photo.Flagged}" />
+                                    </TextBlock>
+                                </WrapPanel>
+                            </materialDesign:Card>
+
+                            <!-- Empty state -->
+                            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Visibility="{Binding HasPhotos, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                                <materialDesign:PackIcon Kind="ImageSearchOutline" Width="72" Height="72" HorizontalAlignment="Center" Opacity="0.3" />
+                                <TextBlock Text="{loc:Loc Photo.NoPhotos}" Opacity="0.55" Margin="0,10,0,0" MaxWidth="360"
+                                           TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Photo list -->
+                            <materialDesign:Card Grid.Row="1" Style="{StaticResource Section}"
+                                                 Visibility="{Binding HasPhotos, Converter={StaticResource BoolToVis}}">
+                                <DataGrid ItemsSource="{Binding PhotosView}"
+                                          Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                          HeadersVisibility="Column" IsReadOnly="False" SelectionMode="Extended"
+                                          GridLinesVisibility="None" RowHeight="60"
+                                          materialDesign:DataGridAssist.CellPadding="10,4"
+                                          materialDesign:DataGridAssist.ColumnHeaderPadding="10,8">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="Auto" />
+                                        <DataGridTemplateColumn Header="{loc:Loc Grid.Preview}" Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Border Width="80" Height="52" CornerRadius="6" Margin="0,3"
+                                                            Background="{DynamicResource MaterialDesignChipBackground}" ClipToBounds="True">
+                                                        <Border.ToolTip>
+                                                            <ToolTip>
+                                                                <ctrl:AsyncThumbnail DecodeWidth="420" Width="320"
+                                                                                     MediaPath="{Binding FullPath}" MediaExtension="{Binding Extension}" />
+                                                            </ToolTip>
+                                                        </Border.ToolTip>
+                                                        <ctrl:AsyncThumbnail DecodeWidth="180"
+                                                                             MediaPath="{Binding FullPath}" MediaExtension="{Binding Extension}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{loc:Loc Grid.File}" Binding="{Binding FileName}" Width="2*" />
+                                        <DataGridTextColumn Header="{loc:Loc Grid.Folder}" Binding="{Binding DirectoryName}" Width="3*" />
+                                        <DataGridTextColumn Header="{loc:Loc Grid.Resolution}" Binding="{Binding Resolution}" Width="Auto" />
+                                        <DataGridTextColumn Header="{loc:Loc Grid.Size}"
+                                                            Binding="{Binding Length, Converter={StaticResource ByteSize}}" Width="Auto" />
+                                        <DataGridTemplateColumn Header="{loc:Loc Grid.Score}" Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Score}" FontWeight="Bold" HorizontalAlignment="Center" />
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                        <DataGridTextColumn Header="{loc:Loc Grid.Issues}" Binding="{Binding FlagsText}" Width="Auto" />
+                                        <DataGridTemplateColumn Width="Auto">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource MaterialDesignIconButton}" Width="28" Height="28" Padding="0"
+                                                            ToolTip="{loc:Loc Action.OpenFolder}"
+                                                            Command="{Binding DataContext.OpenPhotoLocationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}">
+                                                        <materialDesign:PackIcon Kind="FolderOpenOutline" Width="16" Height="16" />
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="{loc:Loc Ctx.Open}"
+                                                      Command="{Binding PlacementTarget.Tag.OpenPhotoCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            <MenuItem Header="{loc:Loc Ctx.OpenLocation}"
+                                                      Command="{Binding PlacementTarget.Tag.OpenPhotoLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                            <MenuItem Header="{loc:Loc Ctx.CopyPath}"
+                                                      Command="{Binding PlacementTarget.Tag.CopyPhotoPathCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                </DataGrid>
+                            </materialDesign:Card>
+
+                            <!-- Photo bottom action bar -->
+                            <materialDesign:Card Grid.Row="2" Style="{StaticResource Section}"
+                                                 Visibility="{Binding HasPhotos, Converter={StaticResource BoolToVis}}">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center">
+                                        <Run Text="{loc:Loc Results.Selected}" />
+                                        <Run Text=": " />
+                                        <Run Text="{Binding SelectedPhotoCount, Mode=OneWay}" FontWeight="Bold" />
+                                        <Run Text=" (" /><Run Text="{Binding SelectedPhotoSizeDisplay, Mode=OneWay}" FontWeight="Bold" /><Run Text=")" />
+                                    </TextBlock>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Style="{StaticResource MaterialDesignOutlinedButton}" Margin="0,0,8,0"
+                                                materialDesign:ButtonAssist.CornerRadius="8"
+                                                Command="{Binding MovePhotosCommand}" Content="{loc:Loc Action.MoveTo}" />
+                                        <Button Style="{StaticResource MaterialDesignRaisedButton}" Margin="0,0,8,0"
+                                                materialDesign:ButtonAssist.CornerRadius="8"
+                                                Command="{Binding RecyclePhotosCommand}" Content="{loc:Loc Action.Recycle}" />
+                                        <Button Command="{Binding DeletePhotosCommand}"
+                                                Background="{StaticResource DangerBrush}" BorderBrush="{StaticResource DangerBrush}"
+                                                materialDesign:ButtonAssist.CornerRadius="8"
+                                                Style="{StaticResource MaterialDesignRaisedButton}"
+                                                Content="{loc:Loc Action.DeletePermanently}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </materialDesign:Card>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- ============ Tab: Statistics ============ -->
+                    <TabItem>
+                        <TabItem.Header>
+                            <StackPanel Orientation="Horizontal">
+                                <materialDesign:PackIcon Kind="ChartBoxOutline" VerticalAlignment="Center" Margin="0,0,6,0" />
+                                <TextBlock Text="{loc:Loc Tab.Statistics}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </TabItem.Header>
+                        <Grid Margin="0,6,0,0">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        Visibility="{Binding HasStatistics, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                                <materialDesign:PackIcon Kind="ChartBoxOutline" Width="72" Height="72" HorizontalAlignment="Center" Opacity="0.3" />
+                                <TextBlock Text="{loc:Loc Stat.NoStats}" Opacity="0.55" Margin="0,10,0,0" HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          Visibility="{Binding HasStatistics, Converter={StaticResource BoolToVis}}">
+                                <StackPanel>
+                                    <!-- Overview -->
+                                    <materialDesign:Card Style="{StaticResource Section}">
+                                        <StackPanel>
+                                            <StackPanel Style="{StaticResource SectionHeader}">
+                                                <Border Style="{StaticResource AccentBar}" />
+                                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Stat.Overview}" />
+                                            </StackPanel>
+                                            <WrapPanel>
+                                                <Border Style="{StaticResource StatCard}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.FilesScanned}" />
+                                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding FilesScanned}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource StatCard}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Stat.BytesScanned}" />
+                                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding BytesScannedDisplay}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource StatCard}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.RedundantFiles}" />
+                                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding RedundantCount}" Foreground="{StaticResource WarnBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource StatCard}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Results.Reclaimable}" />
+                                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding ReclaimableDisplay}" Foreground="{DynamicResource SecondaryHueMidBrush}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <Border Style="{StaticResource StatCard}">
+                                                    <StackPanel>
+                                                        <TextBlock Style="{StaticResource StatLabel}" Text="{loc:Loc Photo.Flagged}" />
+                                                        <TextBlock Style="{StaticResource StatValue}" Text="{Binding FlaggedPhotoCount}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </materialDesign:Card>
+
+                                    <!-- Size by type -->
+                                    <materialDesign:Card Style="{StaticResource Section}"
+                                                         Visibility="{Binding FileTypeBars.Count, Converter={StaticResource CountToVis}}">
+                                        <StackPanel>
+                                            <StackPanel Style="{StaticResource SectionHeader}">
+                                                <Border Style="{StaticResource AccentBar}" />
+                                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Stat.ByType}" />
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding FileTypeBars}" ItemTemplate="{StaticResource StatBarTemplate}" />
+                                        </StackPanel>
+                                    </materialDesign:Card>
+
+                                    <!-- Reclaimable by method -->
+                                    <materialDesign:Card Style="{StaticResource Section}"
+                                                         Visibility="{Binding MethodBars.Count, Converter={StaticResource CountToVis}}">
+                                        <StackPanel>
+                                            <StackPanel Style="{StaticResource SectionHeader}">
+                                                <Border Style="{StaticResource AccentBar}" />
+                                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Stat.ByMethod}" />
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding MethodBars}" ItemTemplate="{StaticResource StatBarTemplate}" />
+                                        </StackPanel>
+                                    </materialDesign:Card>
+
+                                    <!-- Photo quality breakdown -->
+                                    <materialDesign:Card Style="{StaticResource Section}"
+                                                         Visibility="{Binding PhotoFlagBars.Count, Converter={StaticResource CountToVis}}">
+                                        <StackPanel>
+                                            <StackPanel Style="{StaticResource SectionHeader}">
+                                                <Border Style="{StaticResource AccentBar}" />
+                                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Stat.PhotoQuality}" />
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding PhotoFlagBars}" ItemTemplate="{StaticResource StatBarTemplate}" />
+                                        </StackPanel>
+                                    </materialDesign:Card>
+
+                                    <!-- Largest groups -->
+                                    <materialDesign:Card Style="{StaticResource Section}"
+                                                         Visibility="{Binding TopGroups.Count, Converter={StaticResource CountToVis}}">
+                                        <StackPanel>
+                                            <StackPanel Style="{StaticResource SectionHeader}">
+                                                <Border Style="{StaticResource AccentBar}" />
+                                                <TextBlock Style="{StaticResource SectionTitle}" Text="{loc:Loc Stat.TopGroups}" />
+                                            </StackPanel>
+                                            <ItemsControl ItemsSource="{Binding TopGroups}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type vm:DuplicateGroupViewModel}">
+                                                        <Grid Margin="0,4">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <materialDesign:Chip Grid.Column="0" Content="{Binding MethodDisplay}" FontSize="11" Margin="0,0,10,0" />
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                                       Text="{Binding Files[0].FileName}" ToolTip="{Binding Files[0].FullPath}" />
+                                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" FontWeight="Bold"
+                                                                       Foreground="{DynamicResource SecondaryHueMidBrush}"
+                                                                       Text="{Binding ReclaimableBytes, Converter={StaticResource ByteSize}}" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </materialDesign:Card>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
             </Grid>
         </Grid>
     </materialDesign:DialogHost>

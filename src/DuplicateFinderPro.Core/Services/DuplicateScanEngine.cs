@@ -51,6 +51,11 @@ public sealed class DuplicateScanEngine
             allGroups.AddRange(groups);
         }
 
+        // 4) Optional photo-quality pass (gallery cleanup).
+        var photos = options.AnalyzeImageQuality
+            ? await AnalyzePhotosAsync(files, options, progress, ct)
+            : Array.Empty<ImageQualityResult>();
+
         progress.Report(new ScanProgress
         {
             Phase = ScanPhase.Finalizing,
@@ -70,6 +75,8 @@ public sealed class DuplicateScanEngine
             BytesScanned = files.Sum(f => f.Length),
             Elapsed = sw.Elapsed,
             Warnings = warnings,
+            Photos = photos,
+            FileTypes = BuildFileTypeStats(files),
         };
 
         progress.Report(new ScanProgress
@@ -80,6 +87,61 @@ public sealed class DuplicateScanEngine
         });
 
         return result;
+    }
+
+    private static IReadOnlyList<FileTypeStat> BuildFileTypeStats(List<FileItem> files)
+    {
+        long imgC = 0, imgB = 0, vidC = 0, vidB = 0, othC = 0, othB = 0;
+        foreach (var f in files)
+        {
+            if (Utils.MediaTypes.IsImage(f.Extension)) { imgC++; imgB += f.Length; }
+            else if (Utils.MediaTypes.IsVideo(f.Extension)) { vidC++; vidB += f.Length; }
+            else { othC++; othB += f.Length; }
+        }
+        return new List<FileTypeStat>
+        {
+            new("Images", (int)imgC, imgB),
+            new("Videos", (int)vidC, vidB),
+            new("Other", (int)othC, othB),
+        };
+    }
+
+    private static async Task<IReadOnlyList<ImageQualityResult>> AnalyzePhotosAsync(
+        List<FileItem> files, ScanOptions options, IProgress<ScanProgress> progress, CancellationToken ct)
+    {
+        var images = files.Where(f => Utils.MediaTypes.IsImage(f.Extension)).ToList();
+        if (images.Count == 0) return Array.Empty<ImageQualityResult>();
+
+        var dop = options.MaxDegreeOfParallelism > 0
+            ? options.MaxDegreeOfParallelism
+            : (options.GentleResourceUsage ? Math.Max(1, Environment.ProcessorCount / 2) : Environment.ProcessorCount);
+
+        var results = new System.Collections.Concurrent.ConcurrentBag<ImageQualityResult>();
+        var processed = 0L;
+
+        await Parallel.ForEachAsync(
+            images,
+            new ParallelOptions { MaxDegreeOfParallelism = dop, CancellationToken = ct },
+            async (file, token) =>
+            {
+                var r = await ImageQualityAnalyzer.AnalyzeAsync(file, options, token);
+                if (r is not null) results.Add(r);
+
+                var done = Interlocked.Increment(ref processed);
+                if (done % 8 == 0 || done == images.Count)
+                {
+                    progress.Report(new ScanProgress
+                    {
+                        Phase = ScanPhase.AnalyzingPhotos,
+                        StatusKey = "Status.AnalyzingPhotos",
+                        Total = images.Count,
+                        Processed = done,
+                        CurrentFile = file.FullPath,
+                    });
+                }
+            });
+
+        return results.OrderBy(r => r.Score).ToList();
     }
 
     private static List<IDuplicateDetector> BuildDetectors(ScanOptions options, List<string> warnings)

@@ -1,5 +1,8 @@
 namespace DuplicateFinderPro.Core.Models;
 
+/// <summary>Aggregate count and size of one file category (Images/Videos/Other).</summary>
+public sealed record FileTypeStat(string Category, int Count, long Bytes);
+
 /// <summary>
 /// The full outcome of a completed scan.
 /// </summary>
@@ -10,6 +13,12 @@ public sealed class ScanResult
     public required long BytesScanned { get; init; }
     public required TimeSpan Elapsed { get; init; }
     public IReadOnlyList<string> Warnings { get; init; } = Array.Empty<string>();
+
+    /// <summary>Per-image quality assessment (empty unless photo analysis was requested).</summary>
+    public IReadOnlyList<ImageQualityResult> Photos { get; init; } = Array.Empty<ImageQualityResult>();
+
+    /// <summary>Count/size of scanned files grouped into Images / Videos / Other.</summary>
+    public IReadOnlyList<FileTypeStat> FileTypes { get; init; } = Array.Empty<FileTypeStat>();
 
     public int DuplicateFileCount => Groups.Sum(g => g.Count);
 

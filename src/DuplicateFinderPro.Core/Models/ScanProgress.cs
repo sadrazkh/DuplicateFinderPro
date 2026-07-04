@@ -9,6 +9,7 @@ public enum ScanPhase
     MatchingNames,
     HashingPerceptual,
     SamplingVideo,
+    AnalyzingPhotos,
     Finalizing,
     Completed,
     Cancelled,

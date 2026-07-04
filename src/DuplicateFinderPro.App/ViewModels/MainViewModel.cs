@@ -48,6 +48,18 @@ public sealed class MainViewModel : ObservableObject
         SetLanguageCommand = new RelayCommand(p => SetLanguage(p));
         DownloadFfmpegCommand = new AsyncRelayCommand(DownloadFfmpegAsync, () => !IsDownloadingFfmpeg);
 
+        SelectFlaggedPhotosCommand = new RelayCommand(_ => SelectFlaggedPhotos(), _ => HasPhotos);
+        ClearPhotoSelectionCommand = new RelayCommand(_ => ClearPhotoSelection(), _ => HasPhotos);
+        RecyclePhotosCommand = new RelayCommand(_ => RecyclePhotos(), _ => SelectedPhotoCount > 0);
+        DeletePhotosCommand = new RelayCommand(_ => DeletePhotos(), _ => SelectedPhotoCount > 0);
+        MovePhotosCommand = new RelayCommand(_ => MovePhotos(), _ => SelectedPhotoCount > 0);
+        OpenPhotoLocationCommand = new RelayCommand(p => OpenLocationPath((p as PhotoIssueViewModel)?.FullPath));
+        OpenPhotoCommand = new RelayCommand(p => OpenFilePath((p as PhotoIssueViewModel)?.FullPath));
+        CopyPhotoPathCommand = new RelayCommand(p => CopyToClipboard((p as PhotoIssueViewModel)?.FullPath));
+
+        PhotosView = System.Windows.Data.CollectionViewSource.GetDefaultView(PhotoIssues);
+        PhotosView.Filter = o => !ShowOnlyFlaggedPhotos || (o is PhotoIssueViewModel p && p.HasIssues);
+
         RefreshFfmpegStatus();
     }
 
@@ -66,6 +78,12 @@ public sealed class MainViewModel : ObservableObject
 
     private bool _usePerceptualVideo;
     public bool UsePerceptualVideo { get => _usePerceptualVideo; set => SetProperty(ref _usePerceptualVideo, value); }
+
+    private bool _analyzePhotoQuality;
+    public bool AnalyzePhotoQuality { get => _analyzePhotoQuality; set => SetProperty(ref _analyzePhotoQuality, value); }
+
+    private double _blurThreshold = 120;
+    public double BlurThreshold { get => _blurThreshold; set => SetProperty(ref _blurThreshold, Math.Clamp(value, 20, 400)); }
 
     private bool _recursive = true;
     public bool Recursive { get => _recursive; set => SetProperty(ref _recursive, value); }
@@ -161,6 +179,41 @@ public sealed class MainViewModel : ObservableObject
     public ObservableCollection<DuplicateGroupViewModel> Groups { get; } = new();
     public ObservableCollection<string> Warnings { get; } = new();
 
+    // ---- Photo cleanup ----------------------------------------------------
+
+    public ObservableCollection<PhotoIssueViewModel> PhotoIssues { get; } = new();
+    public System.ComponentModel.ICollectionView PhotosView { get; }
+
+    private bool _showOnlyFlaggedPhotos = true;
+    public bool ShowOnlyFlaggedPhotos
+    {
+        get => _showOnlyFlaggedPhotos;
+        set { if (SetProperty(ref _showOnlyFlaggedPhotos, value)) PhotosView.Refresh(); }
+    }
+
+    public bool HasPhotos => PhotoIssues.Count > 0;
+    public int FlaggedPhotoCount => PhotoIssues.Count(p => p.HasIssues);
+
+    private int _selectedPhotoCount;
+    public int SelectedPhotoCount
+    {
+        get => _selectedPhotoCount;
+        private set { if (SetProperty(ref _selectedPhotoCount, value)) OnPropertyChanged(nameof(SelectedPhotoSizeDisplay)); }
+    }
+
+    public string SelectedPhotoSizeDisplay =>
+        ByteSize.Humanize(PhotoIssues.Where(p => p.IsSelected).Sum(p => p.Length));
+
+    // ---- Statistics -------------------------------------------------------
+
+    public ObservableCollection<StatBar> FileTypeBars { get; } = new();
+    public ObservableCollection<StatBar> MethodBars { get; } = new();
+    public ObservableCollection<StatBar> PhotoFlagBars { get; } = new();
+    public ObservableCollection<DuplicateGroupViewModel> TopGroups { get; } = new();
+
+    private string _bytesScannedDisplay = "-";
+    public string BytesScannedDisplay { get => _bytesScannedDisplay; private set => SetProperty(ref _bytesScannedDisplay, value); }
+
     private bool _hasScanned;
     public bool HasScanned { get => _hasScanned; private set => SetProperty(ref _hasScanned, value); }
 
@@ -220,6 +273,14 @@ public sealed class MainViewModel : ObservableObject
     public RelayCommand ToggleThemeCommand { get; }
     public RelayCommand SetLanguageCommand { get; }
     public AsyncRelayCommand DownloadFfmpegCommand { get; }
+    public RelayCommand SelectFlaggedPhotosCommand { get; }
+    public RelayCommand ClearPhotoSelectionCommand { get; }
+    public RelayCommand RecyclePhotosCommand { get; }
+    public RelayCommand DeletePhotosCommand { get; }
+    public RelayCommand MovePhotosCommand { get; }
+    public RelayCommand OpenPhotoLocationCommand { get; }
+    public RelayCommand OpenPhotoCommand { get; }
+    public RelayCommand CopyPhotoPathCommand { get; }
 
     // ---- Folder management ------------------------------------------------
 
@@ -252,17 +313,26 @@ public sealed class MainViewModel : ObservableObject
         }
 
         var methods = BuildMethods();
-        if (methods == DetectionMethod.None)
+        if (methods == DetectionMethod.None && !AnalyzePhotoQuality)
         {
             _dialogs.Warn(L("Msg.NeedMethod"), L("Common.Warning"));
             return;
         }
+
+        // Preview thumbnails use the same ffmpeg + gentleness as the scan.
+        MediaPreviewService.Instance.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? null : FfmpegPath;
+        MediaPreviewService.Instance.Gentle = GentleResourceUsage;
 
         _cts = new CancellationTokenSource();
         IsScanning = true;
         HasScanned = true;
         Groups.Clear();
         Warnings.Clear();
+        PhotoIssues.Clear();
+        FileTypeBars.Clear();
+        MethodBars.Clear();
+        PhotoFlagBars.Clear();
+        TopGroups.Clear();
         OnResultsChanged();
 
         var options = BuildOptions(methods);
@@ -325,6 +395,8 @@ public sealed class MainViewModel : ObservableObject
         VideoSampleSeed = Random.Shared.Next(1, int.MaxValue),
         GentleResourceUsage = GentleResourceUsage,
         FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? null : FfmpegPath,
+        AnalyzeImageQuality = AnalyzePhotoQuality,
+        BlurThreshold = BlurThreshold,
     };
 
     private static HashSet<string> ParseExtensions(string raw)
@@ -362,12 +434,108 @@ public sealed class MainViewModel : ObservableObject
         Warnings.Clear();
         foreach (var w in result.Warnings) Warnings.Add(w);
 
+        // Photos
+        PhotoIssues.Clear();
+        foreach (var photo in result.Photos)
+        {
+            var vm = new PhotoIssueViewModel(photo);
+            vm.PropertyChanged += OnPhotoPropertyChanged;
+            PhotoIssues.Add(vm);
+        }
+        PhotosView.Refresh();
+
         FilesScanned = result.FilesScanned;
         RedundantCount = result.RedundantFileCount;
         ReclaimableDisplay = ByteSize.Humanize(result.ReclaimableBytes);
+        BytesScannedDisplay = ByteSize.Humanize(result.BytesScanned);
         ElapsedDisplay = $"{result.Elapsed.TotalSeconds:0.0}s";
+
+        BuildStatistics(result);
+
+        RefreshSelection();
+        SelectedPhotoCount = 0;
         OnResultsChanged();
+        OnPropertyChanged(nameof(HasPhotos));
+        OnPropertyChanged(nameof(FlaggedPhotoCount));
     }
+
+    private void OnPhotoPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PhotoIssueViewModel.IsSelected))
+            SelectedPhotoCount = PhotoIssues.Count(p => p.IsSelected);
+    }
+
+    // ---- Statistics -------------------------------------------------------
+
+    private void BuildStatistics(ScanResult result)
+    {
+        FileTypeBars.Clear();
+        MethodBars.Clear();
+        PhotoFlagBars.Clear();
+        TopGroups.Clear();
+
+        var primary = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["PrimaryHueMidBrush"];
+        var accent = (System.Windows.Media.Brush)System.Windows.Application.Current.Resources["SecondaryHueMidBrush"];
+        var warn = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xF5, 0x9E, 0x0B));
+
+        // File types (by size)
+        var maxBytes = result.FileTypes.Count == 0 ? 1 : Math.Max(1, result.FileTypes.Max(t => t.Bytes));
+        foreach (var t in result.FileTypes.Where(t => t.Count > 0))
+        {
+            FileTypeBars.Add(new StatBar(
+                $"{L("Stat.Type." + t.Category)} ({t.Count})",
+                ByteSize.Humanize(t.Bytes),
+                (double)t.Bytes / maxBytes, primary));
+        }
+
+        // Duplicate groups by method (reclaimable)
+        var byMethod = result.Groups
+            .GroupBy(g => g.Method)
+            .Select(g => (Method: g.Key, Bytes: g.Sum(x => x.ReclaimableBytes), Count: g.Count()))
+            .OrderByDescending(x => x.Bytes)
+            .ToList();
+        var maxMethod = byMethod.Count == 0 ? 1 : Math.Max(1, byMethod.Max(x => x.Bytes));
+        foreach (var m in byMethod)
+        {
+            MethodBars.Add(new StatBar(
+                $"{MethodName(m.Method)} ({m.Count})",
+                ByteSize.Humanize(m.Bytes),
+                (double)m.Bytes / maxMethod, accent));
+        }
+
+        // Photo flags
+        if (result.Photos.Count > 0)
+        {
+            var flagCounts = result.Photos
+                .SelectMany(p => p.Flags)
+                .GroupBy(f => f)
+                .ToDictionary(g => g.Key, g => g.Count());
+            var good = result.Photos.Count(p => !p.HasIssues);
+            var maxFlag = Math.Max(1, Math.Max(good, flagCounts.Count == 0 ? 0 : flagCounts.Values.Max()));
+
+            PhotoFlagBars.Add(new StatBar($"{L("Photo.Good")} ({good})", good.ToString(), (double)good / maxFlag, accent));
+            foreach (var kv in flagCounts.OrderByDescending(k => k.Value))
+                PhotoFlagBars.Add(new StatBar($"{L("Photo." + kv.Key)} ({kv.Value})", kv.Value.ToString(), (double)kv.Value / maxFlag, warn));
+        }
+
+        // Top 5 space-saving groups
+        var j = 0;
+        foreach (var g in result.Groups.OrderByDescending(g => g.ReclaimableBytes).Take(5))
+            TopGroups.Add(new DuplicateGroupViewModel(++j, g));
+
+        OnPropertyChanged(nameof(HasStatistics));
+    }
+
+    public bool HasStatistics => FileTypeBars.Count > 0 || MethodBars.Count > 0 || PhotoFlagBars.Count > 0;
+
+    private static string MethodName(DetectionMethod m) => m switch
+    {
+        DetectionMethod.ExactContent => Localization.Localization.Instance["Method.ExactContent"],
+        DetectionMethod.NameSimilarity => Localization.Localization.Instance["Method.NameSimilarity"],
+        DetectionMethod.PerceptualImage => Localization.Localization.Instance["Method.PerceptualImage"],
+        DetectionMethod.PerceptualVideo => Localization.Localization.Instance["Method.PerceptualVideo"],
+        _ => m.ToString(),
+    };
 
     private void OnFilePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -473,24 +641,86 @@ public sealed class MainViewModel : ObservableObject
 
     private IEnumerable<FileItemViewModel> AllFiles() => Groups.SelectMany(g => g.Files);
 
-    private void OpenLocation(FileItemViewModel? file)
+    private void OpenLocation(FileItemViewModel? file) => OpenLocationPath(file?.FullPath);
+    private void OpenFile(FileItemViewModel? file) => OpenFilePath(file?.FullPath);
+
+    private void OpenLocationPath(string? path)
     {
-        if (file is null || !File.Exists(file.FullPath)) return;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
         try
         {
-            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{file.FullPath}\"") { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
         }
         catch { /* ignore shell failures */ }
     }
 
-    private void OpenFile(FileItemViewModel? file)
+    private void OpenFilePath(string? path)
     {
-        if (file is null || !File.Exists(file.FullPath)) return;
+        if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
         try
         {
-            Process.Start(new ProcessStartInfo(file.FullPath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
         }
         catch { /* ignore shell failures */ }
+    }
+
+    // ---- Photo cleanup actions --------------------------------------------
+
+    private void SelectFlaggedPhotos()
+    {
+        foreach (var p in PhotoIssues) p.IsSelected = p.HasIssues;
+    }
+
+    private void ClearPhotoSelection()
+    {
+        foreach (var p in PhotoIssues) p.IsSelected = false;
+    }
+
+    private void RecyclePhotos()
+    {
+        var paths = SelectedPhotoPaths();
+        if (paths.Count == 0) return;
+        if (!_dialogs.Confirm(Localization.Localization.Instance.Format("Msg.ConfirmRecycle", paths.Count), L("Common.Confirm"))) return;
+        AfterPhotoAction(_fileActions.SendToRecycleBin(paths), paths);
+    }
+
+    private void DeletePhotos()
+    {
+        var paths = SelectedPhotoPaths();
+        if (paths.Count == 0) return;
+        if (!_dialogs.Confirm(Localization.Localization.Instance.Format("Msg.ConfirmDelete", paths.Count), L("Common.Confirm"))) return;
+        AfterPhotoAction(_fileActions.DeletePermanently(paths), paths);
+    }
+
+    private void MovePhotos()
+    {
+        var paths = SelectedPhotoPaths();
+        if (paths.Count == 0) return;
+        var target = _dialogs.PickFolder(L("Action.MoveTo"));
+        if (target is null) return;
+        AfterPhotoAction(_fileActions.MoveTo(paths, target), paths);
+    }
+
+    private IReadOnlyList<string> SelectedPhotoPaths() =>
+        PhotoIssues.Where(p => p.IsSelected).Select(p => p.FullPath).ToList();
+
+    private void AfterPhotoAction(FileActionResult result, IReadOnlyList<string> attempted)
+    {
+        var errored = new HashSet<string>(result.Errors.Select(e => e.Split(':', 2)[0]), StringComparer.OrdinalIgnoreCase);
+        foreach (var photo in PhotoIssues.Where(p => attempted.Contains(p.FullPath) && !errored.Contains(p.FullPath)).ToList())
+        {
+            photo.PropertyChanged -= OnPhotoPropertyChanged;
+            PhotoIssues.Remove(photo);
+        }
+        PhotosView.Refresh();
+        SelectedPhotoCount = PhotoIssues.Count(p => p.IsSelected);
+        OnPropertyChanged(nameof(HasPhotos));
+        OnPropertyChanged(nameof(FlaggedPhotoCount));
+
+        var msg = Localization.Localization.Instance.Format("Msg.ActionDone", result.Succeeded, ByteSize.Humanize(result.BytesFreed));
+        if (result.HasErrors)
+            msg += "\n" + Localization.Localization.Instance.Format("Msg.ActionErrors", result.Errors.Count);
+        _dialogs.Info(msg, L("App.Title"));
     }
 
     private static void CopyToClipboard(string? text)
@@ -575,6 +805,8 @@ public sealed class MainViewModel : ObservableObject
         UseNameSimilarity = s.UseNameSimilarity;
         UsePerceptualImage = s.UsePerceptualImage;
         UsePerceptualVideo = s.UsePerceptualVideo;
+        AnalyzePhotoQuality = s.AnalyzePhotoQuality;
+        BlurThreshold = s.BlurThreshold;
         Recursive = s.Recursive;
         IncludeHidden = s.IncludeHidden;
         MinSizeKb = s.MinSizeKb;
@@ -601,6 +833,8 @@ public sealed class MainViewModel : ObservableObject
         s.UseNameSimilarity = UseNameSimilarity;
         s.UsePerceptualImage = UsePerceptualImage;
         s.UsePerceptualVideo = UsePerceptualVideo;
+        s.AnalyzePhotoQuality = AnalyzePhotoQuality;
+        s.BlurThreshold = BlurThreshold;
         s.Recursive = Recursive;
         s.IncludeHidden = IncludeHidden;
         s.MinSizeKb = MinSizeKb;

@@ -77,4 +77,18 @@ public sealed class ScanOptions
 
     /// <summary>Max videos decoded in parallel (each ffmpeg is heavy). 0 = auto.</summary>
     public int MaxConcurrentVideoJobs { get; set; } = 2;
+
+    // ---- Photo quality analysis (gallery cleanup) ------------------------
+
+    /// <summary>Also assess every image for blur/darkness/screenshots.</summary>
+    public bool AnalyzeImageQuality { get; set; }
+
+    /// <summary>Laplacian-variance threshold below which a photo is "blurry".</summary>
+    public double BlurThreshold { get; set; } = 120;
+
+    /// <summary>Mean-luminance threshold below which a photo is "dark".</summary>
+    public double DarkThreshold { get; set; } = 42;
+
+    /// <summary>Largest side (px) below which a photo is "low resolution".</summary>
+    public int LowResolutionThreshold { get; set; } = 500;
 }

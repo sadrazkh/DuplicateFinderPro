@@ -13,6 +13,8 @@ public sealed class AppSettings
     public bool UseNameSimilarity { get; set; }
     public bool UsePerceptualImage { get; set; }
     public bool UsePerceptualVideo { get; set; }
+    public bool AnalyzePhotoQuality { get; set; }
+    public double BlurThreshold { get; set; } = 120;
 
     public bool Recursive { get; set; } = true;
     public bool IncludeHidden { get; set; }
