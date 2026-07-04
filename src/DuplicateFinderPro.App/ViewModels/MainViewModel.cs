@@ -564,9 +564,13 @@ public sealed class MainViewModel : ObservableObject
 
     private void OnProgress(ScanProgress p)
     {
-        // Lightweight per-file byte progress: only moves the "current file" bar.
+        // Lightweight per-file byte progress: moves the "current file" bar and
+        // keeps the phase label in sync (byte ticks can arrive before the next
+        // count report, so update the label here too to avoid a stale caption).
         if (p.IsFileTick)
         {
+            StatusText = Localization.Localization.Instance[p.StatusKey];
+            PhaseExplanation = Localization.Localization.Instance[PhaseExplanationKey(p.Phase)];
             CurrentFileFraction = p.CurrentFileFraction;
             if (!string.IsNullOrEmpty(p.CurrentFile)) CurrentFile = p.CurrentFile;
             return;
@@ -576,15 +580,30 @@ public sealed class MainViewModel : ObservableObject
         PhaseExplanation = Localization.Localization.Instance[PhaseExplanationKey(p.Phase)];
         CurrentFile = p.CurrentFile;
         CurrentFileFraction = 0;
-        IsIndeterminate = p.Total <= 0 && p.Phase is not ScanPhase.Completed;
-        ProgressValue = p.Percentage;
 
         if (p.Phase == ScanPhase.Enumerating)
             FilesDiscovered = Math.Max(FilesDiscovered, p.Processed);
 
         PhaseProcessed = p.Processed;
         PhaseTotal = p.Total;
-        PhaseProgressText = p.Total > 0 ? $"{p.Processed:N0} / {p.Total:N0}" : $"{p.Processed:N0}";
+
+        // Byte-based phases (full hashing) show real, honest progress: the total
+        // is known from the start, so both the bar and the ETA are trustworthy.
+        if (p.BytesTotal > 0)
+        {
+            IsIndeterminate = false;
+            ProgressValue = Math.Clamp((double)p.BytesDone / p.BytesTotal * 100, 0, 100);
+            PhaseProgressText = $"{ByteSize.Humanize(p.BytesDone)} / {ByteSize.Humanize(p.BytesTotal)}";
+        }
+        else
+        {
+            IsIndeterminate = p.Total <= 0 && p.Phase is not ScanPhase.Completed;
+            ProgressValue = p.Percentage;
+            PhaseProgressText = p.Total > 0
+                ? $"{p.Processed:N0} / {p.Total:N0} {L("Scan.FilesUnit")}"
+                : $"{p.Processed:N0}";
+        }
+
         if (p.GroupsFound > 0) GroupsFoundLive = p.GroupsFound;
 
         UpdateOverall(p);
@@ -600,9 +619,13 @@ public sealed class MainViewModel : ObservableObject
         var index = _expectedPhases.FindIndex(x => x.Phase == p.Phase);
         if (index < 0) return; // unknown phase — keep the last value
 
-        double fraction = p.Phase == ScanPhase.Enumerating
-            ? 1.0 - 1.0 / (1.0 + FilesDiscovered / 500.0)   // creeps toward 1 as files are found
-            : (p.Total > 0 ? Math.Clamp((double)p.Processed / p.Total, 0, 1) : 0);
+        double fraction;
+        if (p.Phase == ScanPhase.Enumerating)
+            fraction = 1.0 - 1.0 / (1.0 + FilesDiscovered / 500.0);   // creeps toward 1 as files are found
+        else if (p.BytesTotal > 0)
+            fraction = Math.Clamp((double)p.BytesDone / p.BytesTotal, 0, 1);   // real byte progress
+        else
+            fraction = p.Total > 0 ? Math.Clamp((double)p.Processed / p.Total, 0, 1) : 0;
 
         double totalWeight = _expectedPhases.Sum(x => x.Weight);
         double before = 0;

@@ -69,6 +69,8 @@ internal static class Strings
         ["Scan.Phase"] = "مرحله",
         ["Scan.Remaining"] = "زمان باقی‌مانده",
         ["Scan.CurrentFile"] = "فایل در حال بررسی",
+        ["Scan.FilesUnit"] = "فایل",
+        ["Scan.ReadingFile"] = "در حال خواندن این فایل",
 
         ["Explain.Enumerating"] = "در حال فهرست‌کردن همه‌ی فایل‌های داخل پوشه‌ها و زیرپوشه‌ها.",
         ["Explain.QuickScan"] = "غربال سریع: فقط بخش کوچکی از هر فایلِ هم‌اندازه خوانده می‌شود تا بیشترشان بدون خواندن کامل کنار بروند.",
@@ -293,6 +295,8 @@ internal static class Strings
         ["Scan.Phase"] = "Phase",
         ["Scan.Remaining"] = "Time remaining",
         ["Scan.CurrentFile"] = "File being checked",
+        ["Scan.FilesUnit"] = "files",
+        ["Scan.ReadingFile"] = "Reading this file",
 
         ["Explain.Enumerating"] = "Listing every file in the selected folders and sub-folders.",
         ["Explain.QuickScan"] = "Quick pre-filter: reads only a small sample of each same-size file so most are ruled out without a full read.",

@@ -49,14 +49,17 @@ public sealed class ExactContentDetector : IDuplicateDetector
         if (quickCandidates.Count == 0)
             return Array.Empty<DuplicateGroup>();
 
-        // Stage 3 — full hash confirmation (only the survivors).
+        // Stage 3 — full hash confirmation (only the survivors). Reported by
+        // BYTES: the total is known up-front, so the bar is real progress.
+        var totalBytes = quickCandidates.Sum(f => f.Length);
         var fullGroups = await HashAsync(
             quickCandidates, dop, ct, progress, ScanPhase.HashingContent, "Status.HashingContent",
             async (f, fileProgress) =>
             {
                 f.ContentHash = await ContentHasher.FullHashAsync(f.FullPath, ct, fileProgress, f.Length);
                 return $"{f.Length}:{f.ContentHash}";
-            });
+            },
+            totalBytes);
 
         return fullGroups
             .Where(kv => kv.Value.Count > 1)
@@ -75,10 +78,12 @@ public sealed class ExactContentDetector : IDuplicateDetector
         IProgress<ScanProgress> progress,
         ScanPhase phase,
         string statusKey,
-        Func<FileItem, IProgress<double>, Task<string>> keySelector)
+        Func<FileItem, IProgress<double>, Task<string>> keySelector,
+        long totalBytes = 0)
     {
         var result = new ConcurrentDictionary<string, List<FileItem>>();
         var processed = 0L;
+        var bytesDone = 0L;
         var total = items.Count;
         var failures = new ConcurrentBag<string>();
 
@@ -115,7 +120,9 @@ public sealed class ExactContentDetector : IDuplicateDetector
                 }
 
                 var done = Interlocked.Increment(ref processed);
-                if (done % 8 == 0 || done == total)
+                var doneBytes = totalBytes > 0 ? Interlocked.Add(ref bytesDone, file.Length) : 0;
+                // Byte-based phases report on every file (few, large); count-based every 8.
+                if (totalBytes > 0 || done % 8 == 0 || done == total)
                 {
                     progress.Report(new ScanProgress
                     {
@@ -123,6 +130,8 @@ public sealed class ExactContentDetector : IDuplicateDetector
                         StatusKey = statusKey,
                         Total = total,
                         Processed = done,
+                        BytesDone = doneBytes,
+                        BytesTotal = totalBytes,
                         CurrentFile = file.FullPath,
                     });
                 }

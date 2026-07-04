@@ -39,6 +39,12 @@ public sealed record ScanProgress
     /// <summary>Groups discovered so far.</summary>
     public int GroupsFound { get; init; }
 
+    /// <summary>Bytes hashed so far in this phase (for a real, honest progress bar).</summary>
+    public long BytesDone { get; init; }
+
+    /// <summary>Total bytes to hash in this phase (known up-front once candidates are picked).</summary>
+    public long BytesTotal { get; init; }
+
     /// <summary>Fraction (0..1) of the file currently being hashed (big files).</summary>
     public double CurrentFileFraction { get; init; }
 

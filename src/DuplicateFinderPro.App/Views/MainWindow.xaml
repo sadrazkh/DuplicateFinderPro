@@ -846,7 +846,7 @@
                                                                              FontSize="11" />
                                                         <TextBlock VerticalAlignment="Center" Margin="0,0,12,0">
                                                             <Run Text="{loc:Loc Results.Group}" />
-                                                            <Run Text="{Binding Index}" FontWeight="Bold" />
+                                                            <Run Text="{Binding Index, Mode=OneWay}" FontWeight="Bold" />
                                                         </TextBlock>
                                                         <TextBlock VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0.8">
                                                             <Run Text="{Binding Count, Mode=OneWay}" FontWeight="Bold" />
@@ -1353,21 +1353,24 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- Current phase bar -->
+                        <!-- Current phase bar (this many FILES to process) -->
                         <DockPanel Margin="0,0,0,3">
-                            <TextBlock DockPanel.Dock="Right" Opacity="0.7" FontSize="12" Text="{Binding PhaseProgressText}" />
+                            <TextBlock DockPanel.Dock="Right" Opacity="0.75" FontSize="12">
+                                <Run Text="{Binding PhaseProgressText, Mode=OneWay}" FontWeight="SemiBold" />
+                            </TextBlock>
                             <TextBlock FontWeight="Medium" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
                         </DockPanel>
                         <ProgressBar Height="7" Minimum="0" Maximum="100" Margin="0,0,0,10"
                                      Value="{Binding ProgressValue, Mode=OneWay}"
                                      IsIndeterminate="{Binding IsIndeterminate}" />
 
-                        <!-- Current file bar (bytes, for large files) -->
+                        <!-- Current file bar: fills once per large file being read fully -->
                         <DockPanel Margin="0,0,0,3"
                                    Visibility="{Binding CurrentFileFraction, Converter={StaticResource FractionToVis}}">
-                            <TextBlock DockPanel.Dock="Right" Opacity="0.7" FontSize="12"
+                            <TextBlock DockPanel.Dock="Right" Opacity="0.75" FontSize="12"
                                        Text="{Binding CurrentFileFraction, StringFormat={}{0:P0}}" />
-                            <TextBlock Opacity="0.7" FontSize="12" Text="{loc:Loc Scan.CurrentFile}" />
+                            <TextBlock Opacity="0.75" FontSize="12" TextTrimming="CharacterEllipsis"
+                                       Text="{Binding CurrentFileName, Mode=OneWay}" />
                         </DockPanel>
                         <ProgressBar Height="5" Minimum="0" Maximum="1" Margin="0,0,0,14"
                                      Foreground="{DynamicResource SecondaryHueMidBrush}"
